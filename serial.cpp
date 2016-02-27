@@ -3,10 +3,10 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
-#include "quadtree.h"
+#include "Geohash.h"
 
 //
-//  benchmarking program x
+//  benchmarking program
 //
 int main( int argc, char **argv )
 {    
@@ -35,9 +35,8 @@ int main( int argc, char **argv )
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     set_size( n );
     init_particles( n, particles );
-    QuadTree qtree ( particles, n); 
-	qtree.print();
-	
+    GeoRegion aGeoRegion = GeoRegion(particles, size, n);
+    
     //
     //  simulate a number of time steps
     //
@@ -48,16 +47,6 @@ int main( int argc, char **argv )
 	navg = 0;
         davg = 0.0;
 	dmin = 1.0;
-	
-		//QuadTree qtree ( particles, n); //particles.size() );
-		//qtree.print();
-		/*for (int i = 0; i<5; i++ ){
-			Object obj = Object(particles[i].x, particles[i].y,100.0f, 200.0f);
-			qtree.AddObject(&obj);	
-		}
-		*/
-		
-	
         //
         //  compute forces
         //
@@ -72,7 +61,7 @@ int main( int argc, char **argv )
         //  move particles
         //
         for( int i = 0; i < n; i++ ) 
-            move( particles[i] );		
+            move( particles[i] ); //update region
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
