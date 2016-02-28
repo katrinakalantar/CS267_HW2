@@ -36,7 +36,9 @@ int main( int argc, char **argv )
     set_size( n );
     init_particles( n, particles );
     GeoRegion aGeoRegion = GeoRegion(particles, size, n);
-    
+    for (int i = 0; i < n; i++){
+    	update_location(particles[i], aGeoRegion);
+    }
     //
     //  simulate a number of time steps
     //
@@ -52,7 +54,8 @@ int main( int argc, char **argv )
         //
         for( int i = 0; i < n; i++ )
         {
-            particles[i].ax = particles[i].ay = 0;
+            particles[i].ax = particles[i].ay = 0; //change following for loop to just use particles in same
+            //region or neighbors (if edge)
             for (int j = 0; j < n; j++ )
 				apply_force( particles[i], particles[j],&dmin,&davg,&navg);
         }
@@ -61,7 +64,8 @@ int main( int argc, char **argv )
         //  move particles
         //
         for( int i = 0; i < n; i++ ) 
-            move( particles[i] ); //update region
+            move( particles[i] );
+        	//update_location(particles[i], aGeoRegion);
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
