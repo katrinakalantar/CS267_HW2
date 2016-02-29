@@ -3,7 +3,8 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
-#include "Geohash.h"
+#include "GeoRegion.h"
+#include "Region.h"
 
 //
 //  benchmarking program
@@ -33,11 +34,11 @@ int main( int argc, char **argv )
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    set_size( n );
+    double size = set_size( n );
     init_particles( n, particles );
     GeoRegion aGeoRegion = GeoRegion(particles, size, n);
     for (int i = 0; i < n; i++){
-    	update_location(particles[i], aGeoRegion);
+    	aGeoRegion.update_location(particles[i], aGeoRegion);
     }
     //
     //  simulate a number of time steps

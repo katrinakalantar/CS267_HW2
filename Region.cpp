@@ -6,17 +6,20 @@
 #include "common.h"
 #include <vector>
 #include <iostream>
+#include "Region.h"
 
-Region::Region(double x, double y, int num, int totalNum, double regDim){
-	double ul.x = x;
-	double ul.y = y;
-	int num = num;
+Region::Region(double x_in, double y_in, int num_in, int totalNum, double regDim){
+	//double ul.x = x;
+	//double ul.y = y;
+	double x = x_in;
+	double y = y_in;
+	int num = num_in;
 	double dim = regDim;
 	std::vector<int> neighbors;
 	int width = sqrt(totalNum);
 	int a = num-width;
 	int b = num+width;
-	std::vector<particle_t> regParticles;
+	std::vector<particle_t> particles;
 	if ((num % width == 1) or (num % width == 0)){
 		if (num == totalNum){
 			neighbors.push_back(a-1);
@@ -73,37 +76,6 @@ Region::Region(double x, double y, int num, int totalNum, double regDim){
 
 }
 
+Region::Region(){
 
-GeoRegion::GeoRegion(particle_t *inp_data, double size, int n)
-{
-	double dimension = size;
-	double numRegions = pow(ceiling((log2(n)/log2(4))), 2);
-	double regionDim = size/sqrt(numRegions);
-	Region regionsList[numRegions];
-	double xdim;
-	double ydim;
-	for (int i = 1; i < (numRegions + 1); i++){
-		if (i%sqrt(numRegions) != 0){
-			xdim = regionDim*((i%sqrt(numRegions))-1);
-		}else{
-			xdim = regionDim*(sqrt(numRegions)-1);
-		}
-		ydim = min(regionDim*floor(i/sqrt(numRegions)), regionDim*(sqrt(numRegions)-1));
-		regionsList[(i-1)] = Region(xdim, ydim, i, numRegions, regionDim)
-	}
-}
-//do i need a constructor or init function?? how do i use classes in c >_<
-
-void Georegion::update_particles(particle_t &p, int regionNum){
-	regionsList[regionNum].particles.push_back(p) //do i want a pointer to p (*p) or &p?
-}
-void Georegion::clear_particles(){
-	for (int i = 1; i < (numRegions + 1); i++){
-		regionsList[i].particles.swap() //clears vector and reallocates memory
-	}
-}
-
-double doubleMod(double x, double y){
-	double mod = ((x/y) - floor(x/y))*y;
-	return mod;
 }
