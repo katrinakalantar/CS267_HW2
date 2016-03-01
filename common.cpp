@@ -7,7 +7,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include "common.h"
-#include "Geohash.h"
+#include "GeoRegion.h"
 
 double size;
 
@@ -146,19 +146,19 @@ void move( particle_t &p )
     }
 }
 
-void update_location(particle_t &p, Georegion georeg){
+void update_location(particle_t &p, GeoRegion georeg){
 	pReg = get_region(p.x, p.y, georeg);
 	p.region = pReg;
 	georeg.update_particles(p, pReg); //is this how i call a function that is part of georeg?
 	p.edge = check_edge(p.x, p.y, georeg);
 }
 
-int get_region(double x, double y, Georegion georeg){
+int get_region(double x, double y, GeoRegion georeg){
 	regNum = ceiling(x/georeg.regionDim) + ((ceiling(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
 	return regNum;
 }
 
-int check_edge(double x, double y, Georegion georeg){
+int check_edge(double x, double y, GeoRegion georeg){
 	int edge = 0;
 	xDistFromEdge = min((georeg.regionDim - (x%georeg.regionDim)), (x%georeg.regionDim)); //check both left and right edge
 	yDistFromEdge = min((georeg.regionDim - (y%georeg.regionDim)), (y%georeg.regionDim));

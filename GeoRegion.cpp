@@ -1,6 +1,6 @@
 #include <math.h>
 #include <float.h>
-#include <cblas.h>
+//#include <cblas.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "common.h"
