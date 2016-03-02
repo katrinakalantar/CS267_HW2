@@ -17,9 +17,12 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 	//printf("inside GeoRegion\n");
 	double dimension1 = sqrt(.0005 * n);
 	int numRegions1 = pow(ceil((log2(n)/log2(20))), 2);
+	if (numRegions1 > n){
+		numRegions1 = pow(floor(sqrt(n)),2);
+	}
 	//int numRegions1 = 25; //PARAMETERIZED THIS
 	//int sqrt_numRegions1 =5;
-	int sqrt_numRegions1 = sqrt(numRegions1);
+	int sqrt_numRegions1 = (int) sqrt(numRegions1);
 	double regionDim1 = dimension1/sqrt(numRegions1);
 	double a = dimension1/5.0;
 	//printf("regionDim = %f\n",regionDim1);
