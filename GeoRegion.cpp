@@ -1,6 +1,6 @@
 #include <math.h>
 #include <float.h>
-//#include <cblas.h>
+#include <cblas.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "common.h"
@@ -39,6 +39,7 @@ GeoRegion::GeoRegion(particle_t *inp_data, double size, int n)
 //do i need a constructor or init function?? how do i use classes in c >_<
 
 void GeoRegion::update_particles(particle_t &p, int regionNum){
+	int apple;
 	Region a = regionsList[regionNum];
 	regionsList[regionNum].particles.push_back(p); //do i want a pointer to p (*p) or &p?
 }

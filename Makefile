@@ -14,8 +14,8 @@ TARGETS = serial pthreads openmp mpi autograder
 
 all:	$(TARGETS)
 
-serial: serial.o common.o quadtree.o
-	$(CC) -o $@ $(LIBS) serial.o common.o quadtree.o
+serial: serial.o common.o Region.o GeoRegion.o
+	$(CC) -o $@ $(LIBS) serial.o common.o Region.o GeoRegion.o
 autograder: autograder.o common.o
 	$(CC) -o $@ $(LIBS) autograder.o common.o
 pthreads: pthreads.o common.o
@@ -29,16 +29,19 @@ autograder.o: autograder.cpp common.h
 	$(CC) -c $(CFLAGS) autograder.cpp
 openmp.o: openmp.cpp common.h
 	$(CC) -c $(OPENMP) $(CFLAGS) openmp.cpp
-serial.o: serial.cpp common.h quadtree.h
+serial.o: serial.cpp common.h Region.h GeoRegion.h
 	$(CC) -c $(CFLAGS) serial.cpp
 pthreads.o: pthreads.cpp common.h
 	$(CC) -c $(CFLAGS) pthreads.cpp
 mpi.o: mpi.cpp common.h
 	$(MPCC) -c $(CFLAGS) mpi.cpp
-common.o: common.cpp common.h
+common.o: common.cpp common.h Region.h GeoRegion.h
 	$(CC) -c $(CFLAGS) common.cpp
-quadtree.o: quadtree.cpp quadtree.h common.h
-	$(CC) -c $(CFLAGS) quadtree.cpp
+Region.o: common.h
+	$(CC) -c $(CFLAGS) Region.cpp
+GeoRegion.o: common.h
+	$(CC) -c $(CFLAGS) GeoRegion.cpp
+
 
 clean:
 	rm -f *.o $(TARGETS) *.stdout *.txt

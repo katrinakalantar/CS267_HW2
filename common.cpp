@@ -7,7 +7,8 @@
 #include <time.h>
 #include <sys/time.h>
 #include "common.h"
-#include "GeoRegion.h"
+//#include "GeoRegion.h"
+//#include "Region.h"
 
 double size;
 
@@ -40,9 +41,11 @@ double read_timer( )
 //
 //  keep density constant
 //
-void set_size( int n )
+//void set_size( int n )
+double set_size( int n )
 {
     size = sqrt( density * n );
+	return size;
 }
 
 //
@@ -146,27 +149,37 @@ void move( particle_t &p )
     }
 }
 
+/*
 void update_location(particle_t &p, GeoRegion georeg){
 	pReg = get_region(p.x, p.y, georeg);
 	p.region = pReg;
 	georeg.update_particles(p, pReg); //is this how i call a function that is part of georeg?
 	p.edge = check_edge(p.x, p.y, georeg);
 }
+*/
 
+
+/*
 int get_region(double x, double y, GeoRegion georeg){
-	regNum = ceiling(x/georeg.regionDim) + ((ceiling(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
+	int regNum = ceil(x/georeg.regionDim) + ((ceil(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
 	return regNum;
 }
 
 int check_edge(double x, double y, GeoRegion georeg){
 	int edge = 0;
-	xDistFromEdge = min((georeg.regionDim - (x%georeg.regionDim)), (x%georeg.regionDim)); //check both left and right edge
-	yDistFromEdge = min((georeg.regionDim - (y%georeg.regionDim)), (y%georeg.regionDim));
+	//double xDistFromEdge = min((georeg.regionDim - (x%georeg.regionDim)), (x%georeg.regionDim)); //check both left and right edge
+	int colNum = floor(x/georeg.regionDim);
+	int rowNum = floor(y/georeg.regionDim);
+	double xDistFromEdge = min((x - colNum*georeg.regionDim), ((colNum + 1)*georeg.regionDim - x));
+
+	//double yDistFromEdge = min((georeg.regionDim - (y%georeg.regionDim)), (y%georeg.regionDim));
+	double yDistFromEdge = min((y - rowNum*georeg.regionDim), ((rowNum + 1)*georeg.regionDim - y));
 	if ((xDistFromEdge < cutoff) or (yDistFromEdge < cutoff)){
 		edge = 1; //this means the particle is too near to the edge of the region
 	}
 	return edge;
 }
+*/
 
 //
 //  I/O routines
