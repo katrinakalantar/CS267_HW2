@@ -47,7 +47,7 @@ int main( int argc, char **argv )
         }
     }
 
-    Frame grid (sqrt(n) / 10 + 10, sqrt(n) / 10 + 10, particles, n);
+    Frame grid (20, 20, particles, n);
 
     //
     //  simulate a number of time steps
@@ -67,7 +67,7 @@ int main( int argc, char **argv )
         {
 
             particles[i].ax = particles[i].ay = 0;
-            grid.apply_forces(i, particles[i], &dmin, &davg, &navg);
+            grid.apply_forces(particles[i], &dmin, &davg, &navg);
 
             double ax = particles[i].ax;
             double ay = particles[i].ay;
@@ -82,7 +82,6 @@ int main( int argc, char **argv )
             assert(abs(ax - particles[i].ax) < 1e-12);
             assert(abs(ay - particles[i].ay) < 1e-12);
 
-
         }
  
         //
@@ -91,6 +90,10 @@ int main( int argc, char **argv )
         for( int i = 0; i < n; i++ ) {
             move(particles[i]);
         }
+
+        grid.update_locations(particles, n);
+
+        grid.print();
 
         //grid.update_locations();
 

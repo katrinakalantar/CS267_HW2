@@ -15,8 +15,6 @@
 #include <stdlib.h>
 #include <unordered_map>
 #include <vector>
-#include <assert.h>
-#include <iostream>
 
 #define density 0.0005
 
@@ -24,18 +22,18 @@ static inline double min(double x, double y) { return (x <= y ? x : y); }
 static inline double max(double x, double y) { return (x <= y ? y : x); }
 static inline double abs(double x) { return (x < .0 ? -x : x); }
 
-class Frame
+class MPIFrame
 {
 
 public:
-    Frame(const int _n_x, const int _n_y,
-          particle_t* particles, const int _n_particles):
-            size(sqrt( density * _n_particles)),
-            delta_x(sqrt( density * _n_particles) / ((double) _n_x)),
-            delta_y(sqrt( density * _n_particles) / ((double) _n_y)),
+    MPIFrame(const int _n_x, const int _n_y,
+             const int _n_blocks_x, const int _n_blocks_y,
+             particle_t* particles, const int n_particles):
+            size(sqrt( density * n_particles)),
+            delta_x(sqrt( density * n_particles) / _n_x),
+            delta_y(sqrt( density * n_particles) / _n_y),
             n_x(_n_x),
-            n_y(_n_y),
-            n_particles(_n_particles){
+            n_y(_n_y){
 
         part_grid = new particle_t***[n_x];
         next_part_grid = new particle_t***[n_x];
@@ -105,23 +103,10 @@ public:
 
         }
 
-        int current_size;
-        for(int i = 0; i < n_x; ++i){
-            for(int j = 0; j < n_y; ++j){
-                current_size = size_grid[i][j];
-                if(current_size > 0){
-                    for(int k = 0; k < current_size; ++k){
-                        get_idx(part_grid[i][j][k]->x, part_grid[i][j][k]->y, x_idx, y_idx);
-                        assert(i == x_idx);
-                        assert(j == y_idx);
-                    }
-                }
-            }
-        }
-
     }
 
-    inline void apply_forces(particle_t& part,
+    inline void apply_forces(const int part_idx,
+                             particle_t& part,
                              double *dmin,
                              double *davg,
                              int *navg){
@@ -210,46 +195,17 @@ public:
 
     }
 
-    void const print(){
-        double loc_density;
-        for(int i = 0; i < n_x; ++i){
-            for(int j = 0; j < n_y; ++j){
-                loc_density = ((double) size_grid[i][j]) / ((double) n_particles);
-                if(loc_density < 0.0) {
-                    std::cout << ".";
-                    continue;
-                }
-                if(loc_density == 0.0) {
-                    std::cout << "0";
-                    continue;
-                }
-                if(loc_density <= 0.05) {
-                    std::cout << "*";
-                    continue;
-                }
-                if(loc_density <= 0.10) {
-                    std::cout << "#";
-                    continue;
-                }
-                if(loc_density <= 0.20) {
-                    std::cout << "@";
-                    continue;
-                }
-                std::cout << "!";
-            }
-            std::cout << std::endl;
-        }
-        std::cout << std::endl;
-    }
+
 
     
 private:
+    const double offset_x;
+    const double offset_y;
     const double delta_x;
     const double delta_y;
     const double size;
     const int n_x;
     const int n_y;
-    const int n_particles;
 
     particle_t**** part_grid;
     int** size_grid;
@@ -265,8 +221,8 @@ private:
      * IN: x, y. OUT: x_idx, y_idx
      */
     inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
-        x_idx = (int) (x / delta_x);
-        y_idx = (int) (y / delta_y);
+        x_idx = (int) (x - offset_x) / delta_x;
+        y_idx = (int) (y - offset_y) / delta_y;
     }
 
 
