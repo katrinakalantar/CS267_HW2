@@ -3,21 +3,13 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/common.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/openmp.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/quadtree.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/common.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Region.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/quadtree.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/GeoRegion.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Region.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/serial.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Makefile" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/pthreads.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/Geohash.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/autograder.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/mpi.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/GeoRegion.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Region.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/Region.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/GeoRegion.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
     </content>
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module-library">

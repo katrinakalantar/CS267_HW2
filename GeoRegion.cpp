@@ -32,6 +32,7 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 	double xdim1;
 	double ydim1;
 	for (int i = 1; i < (numRegions1 + 1); i++){
+		printf("region num= %d\n", i);
 		//printf("inside GeoRegion - forLoop - \n");
 		//printf("i=%d\n",i);
 		if (i%sqrt_numRegions1 != 0){
@@ -98,13 +99,13 @@ void GeoRegion::update_particles(particle_t &p, int regionNum){
 	//printf("update_particles - regionNum - %d\n",regionNum);
 	Region a = regionsList[regionNum-1]; //TRYING THIS TO SEE IF IT IS AN INDEX ERROR
 	//printf("a.x = %f\n",a.x);
-	regionsList[regionNum-1].particles.push_back(p); //do i want a pointer to p (*p) or &p?
+	regionsList[regionNum-1].add_particle(&p); //do i want a pointer to p (*p) or &p?
 	//printf("pushed back particle p\n");
 }
 void GeoRegion::clear_particles(){
 	std::vector<particle_t> v; //empty vector for swapping
-	for (int i = 1; i < (numRegions + 1); i++){
-		regionsList[i].particles.swap(v); //clears vector and reallocates memory
+	for (int i = 1; i < (numRegions); i++){
+		regionsList[i].get_particles().swap(v); //clears vector and reallocates memory
 	}
 }
 

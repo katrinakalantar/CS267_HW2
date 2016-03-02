@@ -80,18 +80,36 @@ int main( int argc, char **argv )
             //printf("computing forces for i%d\n",i);
             particles[i].ax = particles[i].ay = 0; //change following for loop to just use particles in same
             //region or neighbors (if edge)
-            for (int j = 0; j < n; j++ ) {
-                //printf("applying forces for j%d\n", j);
-                apply_force(particles[i], particles[j], &dmin, &davg, &navg);
+            int reg = particles[i].region;
+            //printf("reg=%d\n",reg);
+            std::vector<int> reg_neighbors = aGeoRegion.get_regionsList()[reg-1].get_neighbors();
+            //printf("reg_neighbors size: %lu\n", reg_neighbors.size());
+
+            for(std::vector<int>::size_type k = 0; k != reg_neighbors.size(); k++) {
+                //printf("inside loop k\n");
+                //printf("k=%d\n",reg_neighbors[k]);
+                //std::vector<particle_t> parts = reg_neighbors[k].get_particles(); // aGeoRegion.get_regionsList()[reg_neighbors[k-1]].particles;
+                std::vector<particle_t> parts =  aGeoRegion.get_regionsList()[reg_neighbors[k]].get_particles();
+
+                printf("particles size: %lu\n", parts.size());
+                //printf("A\n");
+                for(std::vector<particle_t>::size_type j = 0; j != parts.size(); j++){
+                    apply_force(particles[i],parts[j], &dmin, &davg, &navg);
+                    printf("C\n");
+                }
+                //printf("B\n");
             }
+
         }
  
         //
         //  move particles
         //
+        printf("just before moving particles\n");
         for( int i = 0; i < n; i++ ) 
             move( particles[i] );
         	//update_location(particles[i], aGeoRegion);
+        printf("finished moving particles\n");
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
