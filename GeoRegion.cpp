@@ -12,31 +12,87 @@
 //#include <array>
 
 
-GeoRegion::GeoRegion(particle_t *inp_data, double size, int n)
+GeoRegion::GeoRegion(particle_t *inp_data, int n)
 {
-	double dimension = size;
+	printf("inside GeoRegion\n");
+	double dimension1 = sqrt(.0005 * n);
 	//double numRegions = pow(ceil((log2(n)/log2(4))), 2);
-	int numRegions = 25; //PARAMETERIZED THIS
-	int sqrt_numRegions = 5;
-	double regionDim = size/sqrt(numRegions);
+	int numRegions1 = 25; //PARAMETERIZED THIS
+	int sqrt_numRegions1 = 5;
+	double regionDim1 = dimension1/sqrt(numRegions1);
+	double a = dimension1/5.0;
+	printf("regionDim = %f\n",regionDim1);
+	printf("a = %f\n",a);
+	printf("inside GeoRegion - 2\n");
 	//Region regionsList[numRegions];
-	std::vector<Region> regionsList;
+	std::vector<Region> regionsList1;
+	printf("inside GeoRegion - 3\n");
 	//particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
 	//Region *regionsList = (Region*) malloc( (numRegions) * sizeof(Region));
-	double xdim;
-	double ydim;
-	for (int i = 1; i < (numRegions + 1); i++){
-		if (i%sqrt_numRegions != 0){
-			xdim = regionDim*((i%sqrt_numRegions)-1);
+	double xdim1;
+	double ydim1;
+	for (int i = 1; i < (numRegions1 + 1); i++){
+		//printf("inside GeoRegion - forLoop - \n");
+		//printf("i=%d\n",i);
+		if (i%sqrt_numRegions1 != 0){
+			//printf("inside GeoRegion - forLoop - inside if\n");
+			xdim1 = regionDim1*((i%sqrt_numRegions1)-1);
 		}else{
-			xdim = regionDim*(sqrt_numRegions-1);
+			//printf("inside GeoRegion - forLoop - inside else\n");
+			xdim1 = regionDim1*(sqrt_numRegions1-1);
 		}
-		ydim = min(regionDim*floor(i/sqrt_numRegions), regionDim*(sqrt_numRegions-1));
-		regionsList[(i-1)] = Region(xdim, ydim, i, numRegions, regionDim);
-		//regionsList.push_back(Region(xdim, ydim, i, numRegions, regionDim));
+		printf("inside GeoRegion - forLoop - final calculations %d\n",i);
+		ydim1 = min(regionDim1*floor(i/sqrt_numRegions1), regionDim1*(sqrt_numRegions1-1));
+		//regionsList[(i-1)] = Region(xdim, ydim, i, numRegions, regionDim);
+		printf("regionDim inside for loop %f\n",regionDim1);
+		regionsList1.push_back(Region(xdim1, ydim1, i, numRegions1, regionDim1));
 	}
+	printf("regionDim last line of creation %f\n",regionDim1);
+
+	init(dimension1, numRegions1, sqrt_numRegions1, regionDim1, regionsList1, xdim1, ydim1);
+}
+
+void GeoRegion::init(double inp_dimension, int inp_numRegions, int inp_sqrt_numRegions, double inp_regionDim, std::vector<Region> inp_regionsList, double inp_xdim, double inp_ydim){
+
+	dimension = inp_dimension;
+	numRegions = inp_numRegions;
+	sqrt_numRegions = inp_sqrt_numRegions;
+	regionDim = inp_regionDim;
+	regionsList = inp_regionsList;
+	xdim = inp_xdim;
+	ydim = inp_ydim;
+
 }
 //do i need a constructor or init function?? how do i use classes in c >_<
+
+
+double GeoRegion::get_dimension(){
+	return dimension;
+}
+
+int GeoRegion::get_numRegions(){
+	return numRegions;
+}
+
+int GeoRegion::get_sqrt_numRegions(){
+	return sqrt_numRegions;
+}
+
+double GeoRegion::get_regionDim(){
+	return regionDim;
+}
+
+double GeoRegion::get_xdim(){
+	return xdim;
+}
+
+double GeoRegion::get_ydim(){
+	return ydim;
+}
+
+std::vector<Region> GeoRegion::get_regionsList(){
+	return regionsList;
+}
 
 void GeoRegion::update_particles(particle_t &p, int regionNum){
 	int apple;
@@ -50,27 +106,38 @@ void GeoRegion::clear_particles(){
 	}
 }
 
-void GeoRegion::update_location(particle_t &p, GeoRegion georeg){
-	int pReg = get_region(p.x, p.y, georeg);
+void GeoRegion::update_location(particle_t &p){//}, GeoRegion georeg){
+	int pReg = get_region(p.x, p.y);//, georeg);
+	printf("pReg = %d\n",pReg);
 	p.region = pReg;
 	update_particles(p, pReg); //is this how i call a function that is part of georeg?
-	p.edge = check_edge(p.x, p.y, georeg);
+	//p.edge = check_edge(p.x, p.y);//, georeg);
+	//printf("pEdge = %d\n",p.edge);
 }
 
-int GeoRegion::get_region(double x, double y, GeoRegion georeg){
-	int regNum = ceil(x/georeg.regionDim) + ((ceil(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
+int GeoRegion::get_region(double x, double y){//}, GeoRegion georeg){
+	printf("regionDim = %f\n",regionDim);//georeg.regionDim);
+	printf("x= %f\n", x);
+	printf("y= %f\n", y);
+
+	//int regNum = ceil(x/georeg.regionDim) + ((ceil(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
+	int regNum = ceil(x/regionDim) + ((ceil(y/regionDim)-1)*sqrt(numRegions));
+
+	printf("refNum %d\n", regNum);
 	return regNum;
 }
 
-int GeoRegion::check_edge(double x, double y, GeoRegion georeg){
+int GeoRegion::check_edge(double x, double y){// GeoRegion georeg){
 	int edge = 0;
 	//double xDistFromEdge = min((georeg.regionDim - (x%georeg.regionDim)), (x%georeg.regionDim)); //check both left and right edge
-	int colNum = floor(x/georeg.regionDim);
-	int rowNum = floor(y/georeg.regionDim);
-	double xDistFromEdge = min((x - colNum*georeg.regionDim), ((colNum + 1)*georeg.regionDim - x));
+	int colNum = floor(x/regionDim);//georeg.regionDim);
+	int rowNum = floor(y/regionDim);//georeg.regionDim);
+	double xDistFromEdge = min((x - colNum*regionDim), ((colNum + 1)*regionDim - x));
+	//double xDistFromEdge = min((x - colNum*georeg.regionDim), ((colNum + 1)*georeg.regionDim - x));
 
 	//double yDistFromEdge = min((georeg.regionDim - (y%georeg.regionDim)), (y%georeg.regionDim));
-	double yDistFromEdge = min((y - rowNum*georeg.regionDim), ((rowNum + 1)*georeg.regionDim - y));
+	double yDistFromEdge = min((y - rowNum*regionDim), ((rowNum + 1)*regionDim - y));
+	//double yDistFromEdge = min((y - rowNum*georeg.regionDim), ((rowNum + 1)*georeg.regionDim - y));
 	double cutoff = 0.01; //TOOK THIS FROM THE DEFINE CUTOFF=0.01 in common file
 	
 	if ((xDistFromEdge < cutoff) or (yDistFromEdge < cutoff)){
