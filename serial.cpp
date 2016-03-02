@@ -69,7 +69,6 @@ int main( int argc, char **argv )
             particles[i].ax = particles[i].ay = 0;
             grid.apply_forces(i, particles[i], &dmin, &davg, &navg);
 
-            /*
             double ax = particles[i].ax;
             double ay = particles[i].ay;
 
@@ -78,11 +77,10 @@ int main( int argc, char **argv )
                 apply_force(particles[i], particles[j],&dmin,&davg,&navg);
             }
 
-            //auto pt = particles[i];
+            auto pt = particles[i];
 
             assert(abs(ax - particles[i].ax) < 1e-12);
             assert(abs(ay - particles[i].ay) < 1e-12);
-            */
 
 
         }

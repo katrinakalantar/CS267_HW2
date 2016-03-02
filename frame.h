@@ -90,6 +90,16 @@ public:
                     size_grid[i][j] = min(0, size_grid[i][j]);
                 }
             }
+
+            swap_part_grid = part_grid;
+            swap_size_grid = size_grid;
+
+            part_grid = target_grid;
+            size_grid = target_size_grid;
+
+            next_part_grid = swap_part_grid;
+            next_size_grid = swap_size_grid;
+
         }
 
     }
