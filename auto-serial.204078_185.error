@@ -1,0 +1,5 @@
+slurmstepd: *** STEP 204078.3 ON nid00293 CANCELLED AT 2016-03-02T01:13:16 DUE TO TIME LIMIT ***
+slurmstepd: *** JOB 204078 ON nid00293 CANCELLED AT 2016-03-02T01:13:16 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
+srun: forcing job termination
