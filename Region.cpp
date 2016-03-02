@@ -21,7 +21,7 @@ Region::Region(double x_in, double y_in, int num_in, int totalNum, double regDim
 	int b1 = num1+width1;
 	std::vector<particle_t> particles1;
 	if ((num1 % width1 == 1) or (num1 % width1 == 0)){
-		printf("Region_a\n");
+		//printf("Region_a\n");
 		if (num1 == totalNum){
 			neighbors1.push_back(a1-1);
 			neighbors1.push_back(a1);
@@ -52,21 +52,21 @@ Region::Region(double x_in, double y_in, int num_in, int totalNum, double regDim
 			neighbors1.push_back(b1+1);
 		}
 	}else if (num1 < width1){
-		printf("Region_b\n");
+		//printf("Region_b\n");
 		neighbors1.push_back(num1-1);
 		neighbors1.push_back(num1+1);
 		neighbors1.push_back(b1-1);
 		neighbors1.push_back(b1);
 		neighbors1.push_back(b1+1);
 	}else if ((num1 < totalNum) and (num1 > (totalNum - width1))){
-		printf("Region_c\n");
+		//printf("Region_c\n");
 		neighbors1.push_back(a1-1);
 		neighbors1.push_back(a1);
 		neighbors1.push_back(a1+1);
 		neighbors1.push_back(num1-1);
 		neighbors1.push_back(num1+1);
 	}else{
-		printf("Region_d\n");
+		//printf("Region_d\n");
 		neighbors1.push_back(a1-1);
 		neighbors1.push_back(a1);
 		neighbors1.push_back(a1+1);
@@ -76,7 +76,7 @@ Region::Region(double x_in, double y_in, int num_in, int totalNum, double regDim
 		neighbors1.push_back(b1);
 		neighbors1.push_back(b1+1);
 	}
-	printf("num neighbors = %lu\n", neighbors1.size());
+	//printf("num neighbors = %lu\n", neighbors1.size());
 	init(x1,y1,num1,dim1,neighbors1,particles1,width1,a1,b1);
 
 }

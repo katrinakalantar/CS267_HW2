@@ -32,7 +32,7 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 	double xdim1;
 	double ydim1;
 	for (int i = 1; i < (numRegions1 + 1); i++){
-		printf("region num= %d\n", i);
+		//printf("region num= %d\n", i);
 		//printf("inside GeoRegion - forLoop - \n");
 		//printf("i=%d\n",i);
 		if (i%sqrt_numRegions1 != 0){

@@ -21,9 +21,9 @@ typedef struct
   double vy;
   double ax;
   double ay;
-  int region = 0;
-  int edge = 0;
-    int id;
+  int region;
+  int edge;
+  int id;
 } particle_t;
 
 //
