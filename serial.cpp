@@ -47,7 +47,7 @@ int main( int argc, char **argv )
         }
     }
 
-    Frame grid (20, 20, particles, n);
+    Frame grid (40, 40, particles, n);
 
     //
     //  simulate a number of time steps
@@ -79,6 +79,9 @@ int main( int argc, char **argv )
 
             auto pt = particles[i];
 
+            int idx, idy;
+            grid.get_idx(pt.x, pt.y, idx, idy);
+
             assert(abs(ax - particles[i].ax) < 1e-12);
             assert(abs(ay - particles[i].ay) < 1e-12);
 
@@ -93,7 +96,7 @@ int main( int argc, char **argv )
 
         grid.update_locations(particles, n);
 
-        grid.print();
+        //grid.print();
 
         //grid.update_locations();
 

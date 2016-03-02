@@ -137,7 +137,7 @@ public:
         }
 
         // South west neighboring cell
-        if(x_idx > 1 && y_idx > 1){
+        if(x_idx > 0 && y_idx > 0){
             size_x_y = size_grid[x_idx - 1][y_idx - 1];
             ptr = part_grid[x_idx - 1][y_idx - 1];
             for(int i = 0; i < size_x_y; ++i){
@@ -146,7 +146,7 @@ public:
         }
 
         // South neighboring cell
-        if(y_idx > 1){
+        if(y_idx > 0){
             size_x_y = size_grid[x_idx][y_idx - 1];
             ptr = part_grid[x_idx][y_idx - 1];
             for(int i = 0; i < size_x_y; ++i){
@@ -155,7 +155,7 @@ public:
         }
 
         // Shout east neighboring cell
-        if(x_idx < n_x - 1 && y_idx > 1){
+        if(x_idx < n_x - 1 && y_idx > 0){
             size_x_y = size_grid[x_idx + 1][y_idx - 1];
             ptr = part_grid[x_idx + 1][y_idx - 1];
             for(int i = 0; i < size_x_y; ++i){
@@ -164,7 +164,7 @@ public:
         }
 
         // West neighboring cell
-        if(x_idx > 1){
+        if(x_idx > 0){
             size_x_y = size_grid[x_idx - 1][y_idx];
             ptr = part_grid[x_idx - 1][y_idx];
             for(int i = 0; i < size_x_y; ++i){
@@ -182,7 +182,7 @@ public:
         }
 
         // North west neighboring cell
-        if(x_idx > 1 && y_idx < n_y - 1){
+        if(x_idx > 0 && y_idx < n_y - 1){
             size_x_y = size_grid[x_idx - 1][y_idx + 1];
             ptr = part_grid[x_idx - 1][y_idx + 1];
             for(int i = 0; i < size_x_y; ++i){
@@ -242,6 +242,14 @@ public:
         std::cout << std::endl;
     }
 
+/**
+* Look up the indices of that location.
+* IN: x, y. OUT: x_idx, y_idx
+*/
+inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
+    x_idx = (int) (x / delta_x);
+    y_idx = (int) (y / delta_y);
+}
     
 private:
     const double delta_x;
@@ -259,15 +267,6 @@ private:
 
     particle_t**** swap_part_grid;
     int** swap_size_grid;
-
-    /**
-     * Look up the indices of that location.
-     * IN: x, y. OUT: x_idx, y_idx
-     */
-    inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
-        x_idx = (int) (x / delta_x);
-        y_idx = (int) (y / delta_y);
-    }
 
 
 
