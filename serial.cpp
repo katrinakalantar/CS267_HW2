@@ -104,8 +104,8 @@ int main( int argc, char **argv )
                     if(particles[i].id!=parts[j].id){
                         apply_force(particles[i],parts[j], &dmin, &davg, &navg);
                     }
-                    else
-                        //printf("particles[i] == particles[j]\n");
+//                    else
+//                        //printf("particles[i] == particles[j]\n");
                 }
             }
 
