@@ -90,6 +90,7 @@ void init_particles( int n, particle_t *p )
         //
         p[i].vx = drand48()*2-1;
         p[i].vy = drand48()*2-1;
+        p[i].id = i;
         //printf("end of init_particles\n");
     }
     free( shuffle );

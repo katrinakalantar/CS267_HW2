@@ -82,22 +82,31 @@ int main( int argc, char **argv )
             //region or neighbors (if edge)
             int reg = particles[i].region;
             //printf("reg=%d\n",reg);
-            std::vector<int> reg_neighbors = aGeoRegion.get_regionsList()[reg-1].get_neighbors();
-            //printf("reg_neighbors size: %lu\n", reg_neighbors.size());
+            std::vector<int> relev_reg;
+            relev_reg.push_back(particles[i].region);
+            if((particles[i].edge == 1)){ // or (particles[1].edge == 0)){
+                std::vector<int> reg_neighbors = aGeoRegion.get_regionsList()[reg-1].get_neighbors();
+                relev_reg.insert(relev_reg.end(), reg_neighbors.begin(), reg_neighbors.end());
+                //printf("edge\n");
+            }else if (particles[i].edge != 0){
+                printf("aaaaaaaaaaah!!!!");
+            }
 
-            for(std::vector<int>::size_type k = 0; k != reg_neighbors.size(); k++) {
+            //printf("reg_neighbors size: %lu\n", relev_reg.size());
+
+            for(std::vector<int>::size_type k = 0; k != relev_reg.size(); k++) {
                 //printf("inside loop k\n");
                 //printf("k=%d\n",reg_neighbors[k]);
                 //std::vector<particle_t> parts = reg_neighbors[k].get_particles(); // aGeoRegion.get_regionsList()[reg_neighbors[k-1]].particles;
-                std::vector<particle_t> parts =  aGeoRegion.get_regionsList()[reg_neighbors[k]].get_particles();
-
-                printf("particles size: %lu\n", parts.size());
-                //printf("A\n");
+                std::vector<particle_t> parts =  aGeoRegion.get_regionsList()[relev_reg[k]-1].get_particles();
+                
                 for(std::vector<particle_t>::size_type j = 0; j != parts.size(); j++){
-                    apply_force(particles[i],parts[j], &dmin, &davg, &navg);
-                    printf("C\n");
+                    if(particles[i].id!=parts[j].id){
+                        apply_force(particles[i],parts[j], &dmin, &davg, &navg);
+                    }
+                    else
+                        printf("particles[i] == particles[j]\n");
                 }
-                //printf("B\n");
             }
 
         }
@@ -105,11 +114,11 @@ int main( int argc, char **argv )
         //
         //  move particles
         //
-        printf("just before moving particles\n");
+        //printf("just before moving particles\n");
         for( int i = 0; i < n; i++ ) 
             move( particles[i] );
         	//update_location(particles[i], aGeoRegion);
-        printf("finished moving particles\n");
+        //printf("finished moving particles\n");
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {

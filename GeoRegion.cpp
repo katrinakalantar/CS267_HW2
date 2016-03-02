@@ -115,7 +115,7 @@ void GeoRegion::update_location(particle_t &p){//}, GeoRegion georeg){
 	p.region = pReg;
 	//printf("about to update_particles\n");
 	update_particles(p, pReg); //is this how i call a function that is part of georeg?
-	//p.edge = check_edge(p.x, p.y);//, georeg);
+	p.edge = check_edge(p.x, p.y);//, georeg);
 	//printf("pEdge = %d\n",p.edge);
 }
 

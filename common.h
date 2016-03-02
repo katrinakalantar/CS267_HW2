@@ -23,6 +23,7 @@ typedef struct
   double ay;
   int region = 0;
   int edge = 0;
+    int id;
 } particle_t;
 
 //
