@@ -12,7 +12,7 @@
 int main( int argc, char **argv )
 {    
 
-    printf("inside main of serial.cpp\n");
+    //printf("inside main of serial.cpp\n");
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
 
@@ -27,7 +27,7 @@ int main( int argc, char **argv )
         return 0;
     }
 
-    printf("1: after help menu\n");
+    //printf("1: after help menu\n");
     
     int n = read_int( argc, argv, "-n", 1000 );
 
@@ -37,17 +37,18 @@ int main( int argc, char **argv )
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
-    printf("2: assigned initial variables\n");
+    //printf("2: assigned initial variables\n");
 
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    printf("3: created particle_t array\n");
+    //printf("3: created particle_t array\n");
     double size = set_size( n );
-    printf("size = %f\n",size);
-    printf("3.5\n");
+    //printf("size = %f\n",size);
+    //printf("3.5\n");
     init_particles( n, particles );
-    printf("\n4\n");
+    //printf("\n4\n");
     GeoRegion aGeoRegion = GeoRegion(particles, n);
 
+    /*
     printf("regionDim in serial.cpp = %f\n",aGeoRegion.get_regionDim());
     printf("numRegions in serial.cpp = %d\n",aGeoRegion.get_numRegions());
 
@@ -55,10 +56,12 @@ int main( int argc, char **argv )
     printf("dimension in serial.cpp = %f\n",aGeoRegion.get_dimension());
 
     printf("5\n");
+     */
+
     for (int i = 0; i < n; i++){
     	aGeoRegion.update_location(particles[i]);//, aGeoRegion);
     }
-    printf("6\n");
+    //printf("6\n");
     //
     //  simulate a number of time steps
     //
@@ -66,7 +69,6 @@ int main( int argc, char **argv )
 	
     for( int step = 0; step < NSTEPS; step++ )
     {
-        printf("step=%d\n",step);
 	navg = 0;
         davg = 0.0;
 	dmin = 1.0;
@@ -75,11 +77,11 @@ int main( int argc, char **argv )
         //
         for( int i = 0; i < n; i++ )
         {
-            printf("computing forces for i%d\n",i);
+            //printf("computing forces for i%d\n",i);
             particles[i].ax = particles[i].ay = 0; //change following for loop to just use particles in same
             //region or neighbors (if edge)
             for (int j = 0; j < n; j++ ) {
-                printf("applying forces for j%d\n", j);
+                //printf("applying forces for j%d\n", j);
                 apply_force(particles[i], particles[j], &dmin, &davg, &navg);
             }
         }

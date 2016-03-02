@@ -58,11 +58,11 @@ void init_particles( int n, particle_t *p )
     int sx = (int)ceil(sqrt((double)n));
     int sy = (n+sx-1)/sx;
 
-    printf("before malloc\n");
+    //printf("before malloc\n");
 
     int *shuffle = (int*)malloc( n * sizeof(int) );
 
-    printf("after malloc\n");
+    //printf("after malloc\n");
 
     for( int i = 0; i < n; i++ )
         shuffle[i] = i;

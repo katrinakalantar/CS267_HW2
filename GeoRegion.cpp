@@ -14,19 +14,19 @@
 
 GeoRegion::GeoRegion(particle_t *inp_data, int n)
 {
-	printf("inside GeoRegion\n");
+	//printf("inside GeoRegion\n");
 	double dimension1 = sqrt(.0005 * n);
 	//double numRegions = pow(ceil((log2(n)/log2(4))), 2);
 	int numRegions1 = 25; //PARAMETERIZED THIS
 	int sqrt_numRegions1 = 5;
 	double regionDim1 = dimension1/sqrt(numRegions1);
 	double a = dimension1/5.0;
-	printf("regionDim = %f\n",regionDim1);
-	printf("a = %f\n",a);
-	printf("inside GeoRegion - 2\n");
+	//printf("regionDim = %f\n",regionDim1);
+	//printf("a = %f\n",a);
+	//printf("inside GeoRegion - 2\n");
 	//Region regionsList[numRegions];
 	std::vector<Region> regionsList1;
-	printf("inside GeoRegion - 3\n");
+	//printf("inside GeoRegion - 3\n");
 	//particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
 	//Region *regionsList = (Region*) malloc( (numRegions) * sizeof(Region));
 	double xdim1;
@@ -41,13 +41,13 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 			//printf("inside GeoRegion - forLoop - inside else\n");
 			xdim1 = regionDim1*(sqrt_numRegions1-1);
 		}
-		printf("inside GeoRegion - forLoop - final calculations %d\n",i);
+		//printf("inside GeoRegion - forLoop - final calculations %d\n",i);
 		ydim1 = min(regionDim1*floor(i/sqrt_numRegions1), regionDim1*(sqrt_numRegions1-1));
 		//regionsList[(i-1)] = Region(xdim, ydim, i, numRegions, regionDim);
-		printf("regionDim inside for loop %f\n",regionDim1);
+		//printf("regionDim inside for loop %f\n",regionDim1);
 		regionsList1.push_back(Region(xdim1, ydim1, i, numRegions1, regionDim1));
 	}
-	printf("regionDim last line of creation %f\n",regionDim1);
+	//printf("regionDim last line of creation %f\n",regionDim1);
 
 	init(dimension1, numRegions1, sqrt_numRegions1, regionDim1, regionsList1, xdim1, ydim1);
 }
@@ -95,9 +95,11 @@ std::vector<Region> GeoRegion::get_regionsList(){
 }
 
 void GeoRegion::update_particles(particle_t &p, int regionNum){
-	int apple;
-	Region a = regionsList[regionNum];
-	regionsList[regionNum].particles.push_back(p); //do i want a pointer to p (*p) or &p?
+	//printf("update_particles - regionNum - %d\n",regionNum);
+	Region a = regionsList[regionNum-1]; //TRYING THIS TO SEE IF IT IS AN INDEX ERROR
+	//printf("a.x = %f\n",a.x);
+	regionsList[regionNum-1].particles.push_back(p); //do i want a pointer to p (*p) or &p?
+	//printf("pushed back particle p\n");
 }
 void GeoRegion::clear_particles(){
 	std::vector<particle_t> v; //empty vector for swapping
@@ -108,22 +110,23 @@ void GeoRegion::clear_particles(){
 
 void GeoRegion::update_location(particle_t &p){//}, GeoRegion georeg){
 	int pReg = get_region(p.x, p.y);//, georeg);
-	printf("pReg = %d\n",pReg);
+	//printf("pReg = %d\n",pReg);
 	p.region = pReg;
+	//printf("about to update_particles\n");
 	update_particles(p, pReg); //is this how i call a function that is part of georeg?
 	//p.edge = check_edge(p.x, p.y);//, georeg);
 	//printf("pEdge = %d\n",p.edge);
 }
 
 int GeoRegion::get_region(double x, double y){//}, GeoRegion georeg){
-	printf("regionDim = %f\n",regionDim);//georeg.regionDim);
-	printf("x= %f\n", x);
-	printf("y= %f\n", y);
+	//printf("regionDim = %f\n",regionDim);//georeg.regionDim);
+	//printf("x= %f\n", x);
+	//printf("y= %f\n", y);
 
 	//int regNum = ceil(x/georeg.regionDim) + ((ceil(y/georeg.regionDim)-1)*sqrt(georeg.numRegions));
 	int regNum = ceil(x/regionDim) + ((ceil(y/regionDim)-1)*sqrt(numRegions));
 
-	printf("refNum %d\n", regNum);
+	//printf("refNum %d\n", regNum);
 	return regNum;
 }
 
