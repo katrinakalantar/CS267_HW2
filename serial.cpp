@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include "common.h"
-#include "quadtree.h"
+#include "frame.h"
 
 //
 //  benchmarking program x
@@ -35,9 +35,20 @@ int main( int argc, char **argv )
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     set_size( n );
     init_particles( n, particles );
-    QuadTree qtree ( particles, n); 
-	qtree.print();
-	
+
+    double width = 0.0;
+    double height = 0.0;
+    for(int i = 0; i < n; ++i){
+        if(particles[i].x > width){
+            width = particles[i].x;
+        }
+        if(particles[i].y > height){
+            height = particles[i].y;
+        }
+    }
+
+    Frame grid (sqrt(n) / 10 + 10, sqrt(n) / 10 + 10, particles, n);
+
     //
     //  simulate a number of time steps
     //
@@ -45,34 +56,45 @@ int main( int argc, char **argv )
 	
     for( int step = 0; step < NSTEPS; step++ )
     {
-	navg = 0;
+	    navg = 0;
         davg = 0.0;
-	dmin = 1.0;
-	
-		//QuadTree qtree ( particles, n); //particles.size() );
-		//qtree.print();
-		/*for (int i = 0; i<5; i++ ){
-			Object obj = Object(particles[i].x, particles[i].y,100.0f, 200.0f);
-			qtree.AddObject(&obj);	
-		}
-		*/
-		
+	    dmin = 1.0;
 	
         //
         //  compute forces
         //
         for( int i = 0; i < n; i++ )
         {
+
             particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-				apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+            grid.apply_forces(i, particles[i], &dmin, &davg, &navg);
+
+            /*
+            double ax = particles[i].ax;
+            double ay = particles[i].ay;
+
+            particles[i].ax = particles[i].ay = 0;
+            for (int j = 0; j < n; j++ ){
+                apply_force(particles[i], particles[j],&dmin,&davg,&navg);
+            }
+
+            //auto pt = particles[i];
+
+            assert(abs(ax - particles[i].ax) < 1e-12);
+            assert(abs(ay - particles[i].ay) < 1e-12);
+            */
+
+
         }
  
         //
         //  move particles
         //
-        for( int i = 0; i < n; i++ ) 
-            move( particles[i] );		
+        for( int i = 0; i < n; i++ ) {
+            move(particles[i]);
+        }
+
+        //grid.update_locations();
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
@@ -94,7 +116,7 @@ int main( int argc, char **argv )
     }
     simulation_time = read_timer( ) - simulation_time;
     
-    printf( "n = %d, simulation time = %g seconds", n, simulation_time);
+    printf( "\nn = %d, simulation time = %g seconds", n, simulation_time);
 
     if( find_option( argc, argv, "-no" ) == -1 )
     {
