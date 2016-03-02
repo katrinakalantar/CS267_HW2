@@ -105,6 +105,7 @@ public:
 
         }
 
+        /*
         int current_size;
         for(int i = 0; i < n_x; ++i){
             for(int j = 0; j < n_y; ++j){
@@ -118,6 +119,7 @@ public:
                 }
             }
         }
+        */
 
     }
 
@@ -210,7 +212,7 @@ public:
 
     }
 
-    void const print(){
+    virtual void const print(){
         double loc_density;
         for(int i = 0; i < n_x; ++i){
             for(int j = 0; j < n_y; ++j){
@@ -242,16 +244,7 @@ public:
         std::cout << std::endl;
     }
 
-/**
-* Look up the indices of that location.
-* IN: x, y. OUT: x_idx, y_idx
-*/
-inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
-    x_idx = (int) (x / delta_x);
-    y_idx = (int) (y / delta_y);
-}
-    
-private:
+protected:
     const double delta_x;
     const double delta_y;
     const double size;
@@ -268,6 +261,14 @@ private:
     particle_t**** swap_part_grid;
     int** swap_size_grid;
 
+/**
+* Look up the indices of that location.
+* IN: x, y. OUT: x_idx, y_idx
+*/
+    inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
+        x_idx = (int) (x / delta_x);
+        y_idx = (int) (y / delta_y);
+    }
 
 
 };
