@@ -261,10 +261,10 @@ protected:
     particle_t**** swap_part_grid;
     int** swap_size_grid;
 
-/**
-* Look up the indices of that location.
-* IN: x, y. OUT: x_idx, y_idx
-*/
+    /**
+    * Look up the indices of that location.
+    * IN: x, y. OUT: x_idx, y_idx
+    */
     inline void get_idx(const double &x, const double &y, int &x_idx, int &y_idx){
         x_idx = (int) (x / delta_x);
         y_idx = (int) (y / delta_y);
