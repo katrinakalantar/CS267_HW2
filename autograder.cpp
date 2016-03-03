@@ -29,9 +29,7 @@ int main( int argc, char **argv )
     char *savename = read_string( argc, argv, "-s", NULL );
     FILE *fread = savename ? fopen( savename, "r" ) : NULL;
 
-    //char *autoname = read_string( argc, argv, "-v", NULL );
-
-    char* autoname = "serial";
+    char *autoname = read_string( argc, argv, "-v", NULL );
 
     if (strcmp(autoname,"serial")==0){
       if(fread) 
