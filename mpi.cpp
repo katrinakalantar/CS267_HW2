@@ -4,6 +4,10 @@
 #include <assert.h>
 #include "common.h"
 
+#include "MPIframe.h"
+
+#define cutoff  0.01
+
 //
 //  benchmarking program
 //
@@ -39,6 +43,8 @@ int main( int argc, char **argv )
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
+
+    std::cout << "Proc " << rank << std::endl;
     
     //
     //  allocate generic resources
@@ -56,6 +62,9 @@ int main( int argc, char **argv )
     //
     //  set up the data partitioning across processors
     //
+
+    /*
+
     int particle_per_proc = (n + n_proc - 1) / n_proc;
     int *partition_offsets = (int*) malloc( (n_proc+1) * sizeof(int) );
     for( int i = 0; i < n_proc+1; i++ )
@@ -78,6 +87,86 @@ int main( int argc, char **argv )
     if( rank == 0 )
         init_particles( n, particles );
     MPI_Scatterv( particles, partition_sizes, partition_offsets, PARTICLE, local, nlocal, PARTICLE, 0, MPI_COMM_WORLD );
+    */
+
+    particle_t* local_partition;
+    int local_n_particles = 0;
+
+    set_size( n );
+
+    int block_stride = (int) sqrt(n_proc);
+    int n_block_y = block_stride;
+    int n_block_x = n_proc / block_stride;
+
+    if( rank == 0 ) {
+
+        init_particles(n, particles);
+
+        particle_t** partitions = new particle_t*[n_proc];
+        int* n_particles = new int[n_proc];
+        for(int p = 0; p < n_proc; ++p){
+            partitions[p] = new particle_t[n];
+            n_particles[p] = 0;
+        }
+
+        int x_idx, y_idx, proc_idx;
+
+        double delta_x = sqrt(density * n) / ((double) n_block_x);
+        double delta_y = sqrt(density * n) / ((double) n_block_y);
+
+        for (int i = 0; i < n; ++i) {
+            const particle_t &part = particles[i];
+
+            x_idx = (int) (part.x / delta_x);
+            y_idx = (int) (part.y / delta_y);
+            proc_idx = x_idx * block_stride + y_idx;
+
+            partitions[proc_idx][n_particles[proc_idx]++] = part;
+        }
+
+        local_n_particles = n_particles[0];
+        local_partition = new particle_t[local_n_particles];
+        for(int i = 0; i < n_particles[0]; ++i){
+            local_partition[i] = partitions[0][i];
+        }
+
+        MPI_Request reqs[n_proc - 1];
+        for(int p = 1; p < n_proc; ++p){
+            MPI_Isend(&n_particles[p], 1, MPI_INT, p, 2 * p, MPI_COMM_WORLD, &reqs[p - 1]);
+        }
+        std::cout << "Coucou 1 from " << rank << std::endl;
+        MPI_Waitall(n_proc - 1, reqs, MPI_STATUS_IGNORE);
+        std::cout << "Coucou 2 from " << rank << std::endl;
+
+        for(int p = 1; p < n_proc; ++p){
+            MPI_Isend(&partitions[p], n_particles[p], PARTICLE, p, 2 * p + 1, MPI_COMM_WORLD, &reqs[p - 1]);
+        }
+
+        std::cout << "Coucou 3 from " << rank << std::endl;
+        MPI_Waitall(n_proc - 1, reqs, MPI_STATUS_IGNORE);
+        std::cout << "Coucou 4 from " << rank << std::endl;
+
+    }else{
+
+        MPI_Request req;
+
+        MPI_Irecv(&local_n_particles, 1, MPI_INT, 0, 2 * rank, MPI_COMM_WORLD, &req);
+        std::cout << "Coucou 1 from " << rank << std::endl;
+        MPI_Wait(&req, MPI_STATUS_IGNORE);
+        std::cout << "Coucou 2 from " << rank << std::endl;
+
+        local_partition = new particle_t[local_n_particles];
+
+        MPI_Irecv(local_partition, local_n_particles, PARTICLE, 0, 2 * rank + 1, MPI_COMM_WORLD, &req);
+        std::cout << "Coucou 3 from " << rank << std::endl;
+        MPI_Wait(&req, MPI_STATUS_IGNORE);
+        std::cout << "Coucou 4 from " << rank << std::endl;
+
+    }
+
+    int block_x = rank / block_stride;
+    int block_y = rank % block_stride;
+    MPIFrame frame(block_stride, block_x, block_y, n_block_x, n_block_y, 10, 10, local_partition, local_n_particles);
     
     //
     //  simulate a number of time steps
@@ -91,7 +180,7 @@ int main( int argc, char **argv )
         // 
         //  collect all global data locally (not good idea to do)
         //
-        MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
+        //MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
         
         //
         //  save current step if necessary (slightly different semantics than in other codes)
@@ -103,21 +192,15 @@ int main( int argc, char **argv )
         //
         //  compute all forces
         //
-        for( int i = 0; i < nlocal; i++ )
-        {
-            local[i].ax = local[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-                apply_force( local[i], particles[j], &dmin, &davg, &navg );
-        }
+        frame.apply_forces();
      
         if( find_option( argc, argv, "-no" ) == -1 )
         {
           
-          MPI_Reduce(&davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-          MPI_Reduce(&navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
-          MPI_Reduce(&dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
+          MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+          MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+          MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
 
- 
           if (rank == 0){
             //
             // Computing statistical data
@@ -128,13 +211,14 @@ int main( int argc, char **argv )
             }
             if (rdmin < absmin) absmin = rdmin;
           }
+
         }
 
         //
         //  move particles
         //
-        for( int i = 0; i < nlocal; i++ )
-            move( local[i] );
+        frame.update_locations();
+
     }
     simulation_time = read_timer( ) - simulation_time;
   
@@ -169,9 +253,6 @@ int main( int argc, char **argv )
     //
     if ( fsum )
         fclose( fsum );
-    free( partition_offsets );
-    free( partition_sizes );
-    free( local );
     free( particles );
     if( fsave )
         fclose( fsave );

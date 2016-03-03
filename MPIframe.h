@@ -9,8 +9,9 @@
  *
  */
 
-#ifndef QUADTREE_H
-#define QUADTREE_H
+
+#pragma once
+
 #include "common.h"
 #include <stdlib.h>
 #include <unordered_map>
@@ -20,9 +21,8 @@
 #include <mpi.h>
 #include "frame.h"
 
-static inline double min(double x, double y) { return (x <= y ? x : y); }
-static inline double max(double x, double y) { return (x <= y ? y : x); }
-static inline double abs(double x) { return (x < .0 ? -x : x); }
+#define density 0.0005
+
 
 class MPIFrame{
 
@@ -32,12 +32,20 @@ public:
              const int _n_block_x, const int _n_block_y,
              const int _n_x, const int _n_y,
              particle_t *particles, const int _n_particles) :
-            rank(_block_x * _block_stride + block_y),
+            size(sqrt( density * _n_particles)),
+            delta_x(sqrt( density * _n_particles) / ((double) _n_x)),
+            delta_y(sqrt( density * _n_particles) / ((double) _n_y)),
+            n_x(_n_x),
+            n_y(_n_y),
+            max_n_particles(_n_particles),
+            rank(_block_x * _block_stride + _block_y),
             block_stride(_block_stride),
             block_x(_block_x),
             block_y(_block_y),
-            offset_x(_block_x * _n_x * (sqrt( density * _n_particles) / ((double) _n_x))),
-            offset_y(_block_y * _n_y * (sqrt( density * _n_particles) / ((double) _n_y))){
+            n_block_x(_n_block_x),
+            n_block_y(_n_block_y),
+            x_offset(_block_x * _n_x * (sqrt( density * _n_particles) / ((double) _n_x))),
+            y_offset(_block_y * _n_y * (sqrt( density * _n_particles) / ((double) _n_y))){
 
         part_grid = new particle_t***[n_x];
         next_part_grid = new particle_t***[n_x];
@@ -45,11 +53,11 @@ public:
         size_grid = new int*[n_x];
         next_size_grid = new int*[n_x];
 
-        mem = new particle_t[n_particles];
-        n_particles = 0;
+        mem = new particle_t[_n_particles];
+        mem_size = 0;
 
-        next_mem = new particle_t[n_particles];
-        next_n_particles = 0;
+        next_mem = new particle_t[_n_particles];
+        next_mem_size = 0;
 
         int i, j;
 
@@ -67,11 +75,7 @@ public:
 
         }
 
-        update_locations(particles, n_particles, false);
-
-        MPI_Datatype PARTICLE;
-        MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE );
-        MPI_Type_commit( &PARTICLE );
+        update_locations(false);
 
         /*
         * Init send buffers for locations
@@ -190,30 +194,42 @@ public:
      *
      * ------------------------------------------------
      *
-
-    /*
+     *
      * Send/receive information about particles in NW corner
      */
+
+private:
     inline void comm_buffer(int target, int source, bool should_send, bool should_recv, int &msg_idx,
                             int n_to_send, int & n_to_recv, particle_t* send_buffer, particle_t* recv_buffer){
+
+        MPI_Datatype PARTICLE;
+        MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE);
+        MPI_Type_commit( &PARTICLE );
+
+        MPI_Request reqs[2];
+
         int msg_tag = ++msg_idx;
         // Send info about size to NW neighbor
         if (should_send) {
-            MPI_Send(&(n_to_send), 1, MPI_INT, target, msg_tag, MPI_COMM_WORLD);
+            MPI_Isend(&(n_to_send), 1, MPI_INT, target, msg_tag, MPI_COMM_WORLD, &reqs[0]);
         }
-        // Receive info from the SE neighbor
+        // Receive info about size from the SE neighbor
         if (should_recv) {
-            MPI_Recv(&(n_to_recv), 1, MPI_INT, source, msg_tag, MPI_COMM_WORLD);
+            MPI_Irecv(&(n_to_recv), 1, MPI_INT, source, msg_tag, MPI_COMM_WORLD, &reqs[1]);
         }
+        MPI_Waitall(2, reqs, MPI_STATUS_IGNORE);
+
         msg_tag = ++msg_idx;
         // Send particles
         if (should_send) {
-            MPI_Send(send_buffer, n_to_send, PARTICLE, target, msg_tag, MPI_COMM_WORLD);
+            MPI_Isend(send_buffer, n_to_send, PARTICLE, target, msg_tag, MPI_COMM_WORLD, &reqs[0]);
         }
         // Receive particles
         if (should_recv) {
-            MPI_Recv(recv_buffer, n_to_recv, PARTICLE, source, msg_tag, MPI_COMM_WORLD);
+            MPI_Irecv(recv_buffer, n_to_recv, PARTICLE, source, msg_tag, MPI_COMM_WORLD, &reqs[1]);
         }
+        MPI_Waitall(2, reqs, MPI_STATUS_IGNORE);
+
     }
 
     /**
@@ -486,128 +502,139 @@ public:
      * ----------------------------------------------------------
      */
 
-    inline void apply_forces(particle_t& part,
-                             double *dmin,
-                             double *davg,
-                             int *navg){
+public:
 
-        comm_all_locations();
+    int navg;
+    double dmin;
+    double davg;
 
-        int x_idx, y_idx, size_x_y;
-        particle_t** ptr;
+    inline void apply_forces(){
 
-        /*
+        navg = 0;
+        dmin = 1.0;
+        davg = 0.0;
+
+        for(int p_idx = 0; p_idx < mem_size; ++p_idx) {
+
+            particle_t &part = mem[p_idx];
+
+            int x_idx, y_idx, size_x_y;
+            particle_t **ptr;
+
+            /*
          * Interaction with particles in the same cell
          */
-        get_idx(part.x, part.y, x_idx, y_idx);
-        size_x_y = size_grid[x_idx][y_idx];
-        ptr = part_grid[x_idx][y_idx];
-        for(int i = 0; i < size_x_y; ++i){
-            apply_force(part, **(ptr++), dmin, davg, navg);
-        }
+            get_idx(part.x, part.y, x_idx, y_idx);
+            size_x_y = size_grid[x_idx][y_idx];
+            ptr = part_grid[x_idx][y_idx];
+            for (int i = 0; i < size_x_y; ++i) {
+                apply_force(part, **(ptr++), &dmin, &davg, &navg);
+            }
 
-        // South west neighboring cell
-        if(x_idx > 0 && y_idx > 0){
-            size_x_y = size_grid[x_idx - 1][y_idx - 1];
-            ptr = part_grid[x_idx - 1][y_idx - 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // South west neighboring cell
+            if (x_idx > 0 && y_idx > 0) {
+                size_x_y = size_grid[x_idx - 1][y_idx - 1];
+                ptr = part_grid[x_idx - 1][y_idx - 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x > 0 && block_y > 0) {
+                for (int i = 0; i < SWr_n; ++i) {
+                    apply_force(part, SWr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x > 0 && block_y > 0){
-            for(int i = 0; i < SWr_n; ++i){
-                apply_force(part, SWr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // South neighboring cell
-        if(y_idx > 0){
-            size_x_y = size_grid[x_idx][y_idx - 1];
-            ptr = part_grid[x_idx][y_idx - 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // South neighboring cell
+            if (y_idx > 0) {
+                size_x_y = size_grid[x_idx][y_idx - 1];
+                ptr = part_grid[x_idx][y_idx - 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_y > 0) {
+                for (int i = 0; i < Sr_n; ++i) {
+                    apply_force(part, Sr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_y > 0){
-            for(int i = 0; i < Sr_n; ++i){
-                apply_force(part, Sr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // Shout east neighboring cell
-        if(x_idx < n_x - 1 && y_idx > 0){
-            size_x_y = size_grid[x_idx + 1][y_idx - 1];
-            ptr = part_grid[x_idx + 1][y_idx - 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // Shout east neighboring cell
+            if (x_idx < n_x - 1 && y_idx > 0) {
+                size_x_y = size_grid[x_idx + 1][y_idx - 1];
+                ptr = part_grid[x_idx + 1][y_idx - 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x < n_block_x - 1 && block_y > 0) {
+                for (int i = 0; i < SEr_n; ++i) {
+                    apply_force(part, SEr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x < n_block_x - 1 && block_y > 0){
-            for(int i = 0; i < SEr_n; ++i){
-                apply_force(part, SEr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // West neighboring cell
-        if(x_idx > 0){
-            size_x_y = size_grid[x_idx - 1][y_idx];
-            ptr = part_grid[x_idx - 1][y_idx];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // West neighboring cell
+            if (x_idx > 0) {
+                size_x_y = size_grid[x_idx - 1][y_idx];
+                ptr = part_grid[x_idx - 1][y_idx];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x > 0) {
+                for (int i = 0; i < Wr_n; ++i) {
+                    apply_force(part, Wr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x > 0){
-            for(int i = 0; i < Wr_n; ++i){
-                apply_force(part, Wr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // East neighboring cell
-        if(x_idx < n_x - 1){
-            size_x_y = size_grid[x_idx + 1][y_idx];
-            ptr = part_grid[x_idx + 1][y_idx];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // East neighboring cell
+            if (x_idx < n_x - 1) {
+                size_x_y = size_grid[x_idx + 1][y_idx];
+                ptr = part_grid[x_idx + 1][y_idx];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x < n_block_x - 1) {
+                for (int i = 0; i < Er_n; ++i) {
+                    apply_force(part, Er_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x < n_block_x - 1){
-            for(int i = 0; i < Er_n; ++i){
-                apply_force(part, Er_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // North west neighboring cell
-        if(x_idx > 0 && y_idx < n_y - 1){
-            size_x_y = size_grid[x_idx - 1][y_idx + 1];
-            ptr = part_grid[x_idx - 1][y_idx + 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // North west neighboring cell
+            if (x_idx > 0 && y_idx < n_y - 1) {
+                size_x_y = size_grid[x_idx - 1][y_idx + 1];
+                ptr = part_grid[x_idx - 1][y_idx + 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x > 0 && block_y < n_block_y - 1) {
+                for (int i = 0; i < NWr_n; ++i) {
+                    apply_force(part, NWr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x > 0 && block_y < n_block_y - 1){
-            for(int i = 0; i < NWr_n; ++i){
-                apply_force(part, NWr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // North neighboring cell
-        if(y_idx < n_y - 1){
-            size_x_y = size_grid[x_idx][y_idx + 1];
-            ptr = part_grid[x_idx][y_idx + 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // North neighboring cell
+            if (y_idx < n_y - 1) {
+                size_x_y = size_grid[x_idx][y_idx + 1];
+                ptr = part_grid[x_idx][y_idx + 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_y < n_block_y - 1) {
+                for (int i = 0; i < Nr_n; ++i) {
+                    apply_force(part, Nr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_y < n_block_y - 1){
-            for(int i = 0; i < Nr_n; ++i){
-                apply_force(part, Nr_buffer[i], dmin, davg, navg);
-            }
-        }
 
-        // North east neighboring cell
-        if(x_idx < n_x - 1 && y_idx < n_y - 1){
-            size_x_y = size_grid[x_idx + 1][y_idx + 1];
-            ptr = part_grid[x_idx + 1][y_idx + 1];
-            for(int i = 0; i < size_x_y; ++i){
-                apply_force(part, **(ptr++), dmin, davg, navg);
+            // North east neighboring cell
+            if (x_idx < n_x - 1 && y_idx < n_y - 1) {
+                size_x_y = size_grid[x_idx + 1][y_idx + 1];
+                ptr = part_grid[x_idx + 1][y_idx + 1];
+                for (int i = 0; i < size_x_y; ++i) {
+                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                }
+            } else if (block_x < n_block_x - 1 && block_y < n_block_y - 1) {
+                for (int i = 0; i < NEr_n; ++i) {
+                    apply_force(part, NEr_buffer[i], &dmin, &davg, &navg);
+                }
             }
-        }else if(block_x < n_block_x - 1 && block_y < n_block_y - 1){
-            for(int i = 0; i < NEr_buffer; ++i){
-                apply_force(part, NEr_buffer[i], dmin, davg, navg);
-            }
+
         }
 
     }
@@ -617,7 +644,10 @@ public:
      * figure out which need to be sent to neighbors
      * for managing and which are in a bordering zone.
      */
-    inline void update_locations(particle_t* particles, const int n_particles, bool next_frame = true) {
+    inline void update_locations(bool next_frame = true) {
+
+        particle_t* particles = mem;
+        int n_particles = mem_size;
 
         clear_loc_buffers();
 
@@ -629,18 +659,20 @@ public:
             target_grid = next_part_grid;
             target_size_grid = next_size_grid;
             target_mem = next_mem;
-            target_n_particles = &next_n_particles;
+            target_n_particles = &next_mem_size;
         } else {
             target_grid = part_grid;
             target_size_grid = size_grid;
             target_mem = mem;
-            target_n_particles = &n_particles;
+            target_n_particles = &mem_size;
         }
 
         int x_idx, y_idx;
         for (int i = 0; i < n_particles; ++i) {
 
-            const particle_t &part = particles[i];
+            particle_t &part = particles[i];
+
+            if (next_frame) move(part);
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
@@ -726,6 +758,9 @@ public:
              * within the region this processor manages
              * and add them to the memory and location grid
              */
+
+            comm_all_particles();
+
             /**
              * Add particles from NW neighbor
              */
@@ -822,8 +857,9 @@ public:
                     *target_n_particles
             );
 
-            clear_p_buffers();
         }
+
+        clear_p_buffers();
 
         /**
          * Give the location of particles in bordering zones
@@ -856,24 +892,24 @@ public:
             part_grid = target_grid;
             size_grid = target_size_grid;
             mem = target_mem;
-            n_particles = target_n_particles;
+            mem_size = *target_n_particles;
 
             next_part_grid = swap_part_grid;
             next_size_grid = swap_size_grid;
             next_mem = swap_mem;
-            next_n_particles = swap_n_particles;
+            next_mem_size = swap_n_particles;
 
         }
 
     }
 
-protected:
+private:
     const double delta_x;
     const double delta_y;
     const double size;
     const int n_x;
     const int n_y;
-    const int n_particles;
+    const int max_n_particles;
 
     particle_t**** part_grid;
     int** size_grid;
@@ -882,10 +918,10 @@ protected:
     int** next_size_grid;
 
     particle_t* mem;
-    int n_particles;
+    int mem_size;
 
     particle_t* next_mem;
-    int next_n_particles;
+    int next_mem_size;
 
     const int rank;
     const int block_stride;
@@ -895,9 +931,6 @@ protected:
     const int n_block_y;
     const double x_offset;
     const double y_offset;
-
-    const std::vector<particle_t> particles;
-    const std::vector<int> to_remove;
 
     /*
      * -------------------------------------------
@@ -1094,11 +1127,11 @@ protected:
 
         for(int i = 0; i < n_buffer; ++i) {
 
-            const particle_t &part = particles[i];
+            const particle_t &part = buffer[i];
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
-            target_mem[target_n_particles++] = part;
+            target_mem[target_n_particles] = part;
 
             assert(x_idx >= 0);
             assert(y_idx >= 0);
@@ -1148,10 +1181,10 @@ protected:
             if (x_idx >= 0 && y_idx >= 0 && x_idx < n_x && y_idx < n_x) {
                 int &size_x_y = target_size_grid[x_idx][y_idx];
                 if (size_x_y == -1) {
-                    target_grid[x_idx][y_idx] = new particle_t *[n_particles];
+                    target_grid[x_idx][y_idx] = new particle_t *[max_n_particles];
                     size_x_y = 0;
                 }
-                target_grid[x_idx][y_idx][size_x_y] = particles + i;
+                target_grid[x_idx][y_idx][size_x_y] = target_mem + (target_n_particles++);
                 ++size_x_y;
             }
 
@@ -1160,5 +1193,3 @@ protected:
     }
 
 };
-
-#endif

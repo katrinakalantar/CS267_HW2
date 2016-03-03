@@ -9,8 +9,9 @@
  *
  */
 
-#ifndef QUADTREE_H
-#define QUADTREE_H
+
+#pragma once
+
 #include "common.h"
 #include <stdlib.h>
 #include <unordered_map>
@@ -272,5 +273,3 @@ protected:
 
 
 };
-
-#endif

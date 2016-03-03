@@ -29,8 +29,10 @@ int main( int argc, char **argv )
     char *savename = read_string( argc, argv, "-s", NULL );
     FILE *fread = savename ? fopen( savename, "r" ) : NULL;
 
-    char *autoname = read_string( argc, argv, "-v", NULL );
-     
+    //char *autoname = read_string( argc, argv, "-v", NULL );
+
+    char* autoname = "serial";
+
     if (strcmp(autoname,"serial")==0){
       if(fread) 
         while( fscanf (fread,"%d %lf",&n[count],&t[count]) != EOF ) 
