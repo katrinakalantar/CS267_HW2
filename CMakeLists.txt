@@ -11,22 +11,22 @@ set(SOURCE_FILES
     #autograder.cpp
     common.cpp
     common.h
-    mpi.cpp
+    #mpi.cpp
     #openmp.cpp
     #pthreads.cpp
-    #serial.cpp
+    serial.cpp
     )
 
 add_executable(CS267_HW2 ${SOURCE_FILES})
 
-target_link_libraries(CS267_HW2 ${MPI_LIBRARIES})
+#target_link_libraries(CS267_HW2 ${MPI_LIBRARIES})
 
-if(MPI_COMPILE_FLAGS)
-  set_target_properties(CS267_HW2 PROPERTIES
-    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
-endif()
+#if(MPI_COMPILE_FLAGS)
+#  set_target_properties(CS267_HW2 PROPERTIES
+#    COMPILE_FLAGS "${MPI_COMPILE_FLAGS}")
+#endif()
 
-if(MPI_LINK_FLAGS)
-  set_target_properties(CS267_HW2 PROPERTIES
-    LINK_FLAGS "${MPI_LINK_FLAGS}")
-endif()
+#if(MPI_LINK_FLAGS)
+#  set_target_properties(CS267_HW2 PROPERTIES
+#    LINK_FLAGS "${MPI_LINK_FLAGS}")
+#endif()
