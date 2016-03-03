@@ -131,43 +131,47 @@ int main( int argc, char **argv )
         }
 
         MPI_Request reqs[n_proc - 1];
+        MPI_Status  status[n_proc - 1];
         for(int p = 1; p < n_proc; ++p){
-            MPI_Isend(&n_particles[p], 1, MPI_INT, p, 2 * p, MPI_COMM_WORLD, &reqs[p - 1]);
+            MPI_Isend(&n_particles[p], 1, MPI_INT, p, 2 * p, MPI_COMM_WORLD, reqs  + p - 1);
         }
-        std::cout << "Coucou 1 from " << rank << std::endl;
-        MPI_Waitall(n_proc - 1, reqs, MPI_STATUS_IGNORE);
-        std::cout << "Coucou 2 from " << rank << std::endl;
+        std::cout << "O Sending initial size data from " << rank << std::endl;
+        MPI_Waitall(n_proc - 1, reqs, status);
+        std::cout << "X Sent initial size data from " << rank << std::endl;
 
         for(int p = 1; p < n_proc; ++p){
-            MPI_Isend(&partitions[p], n_particles[p], PARTICLE, p, 2 * p + 1, MPI_COMM_WORLD, &reqs[p - 1]);
+            MPI_Isend(&partitions[p], n_particles[p], PARTICLE, p, 2 * p + 1, MPI_COMM_WORLD, reqs + p - 1);
         }
 
-        std::cout << "Coucou 3 from " << rank << std::endl;
-        MPI_Waitall(n_proc - 1, reqs, MPI_STATUS_IGNORE);
-        std::cout << "Coucou 4 from " << rank << std::endl;
+        std::cout << "O Sending initial particle data from " << rank << std::endl;
+        MPI_Waitall(n_proc - 1, reqs, status);
+        std::cout << "X Sent initial particle data from " << rank << std::endl;
 
     }else{
 
         MPI_Request req;
 
         MPI_Irecv(&local_n_particles, 1, MPI_INT, 0, 2 * rank, MPI_COMM_WORLD, &req);
-        std::cout << "Coucou 1 from " << rank << std::endl;
+        std::cout << "O Receiving initial size data on " << rank << std::endl;
         MPI_Wait(&req, MPI_STATUS_IGNORE);
-        std::cout << "Coucou 2 from " << rank << std::endl;
+        std::cout << "X Received initial size data on " << rank << std::endl;
 
         local_partition = new particle_t[local_n_particles];
 
         MPI_Irecv(local_partition, local_n_particles, PARTICLE, 0, 2 * rank + 1, MPI_COMM_WORLD, &req);
-        std::cout << "Coucou 3 from " << rank << std::endl;
+        std::cout << "O Receiving initial particle data on " << rank << std::endl;
         MPI_Wait(&req, MPI_STATUS_IGNORE);
-        std::cout << "Coucou 4 from " << rank << std::endl;
+        std::cout << "X Received initial particle data on " << rank << std::endl;
 
     }
 
     int block_x = rank / block_stride;
     int block_y = rank % block_stride;
+    std::cout << "Starting init on " << rank << std::endl;
     MPIFrame frame(block_stride, block_x, block_y, n_block_x, n_block_y, 10, 10, local_partition, local_n_particles);
-    
+    std::cout << "Init done on " << rank << std::endl;
+    std::cout << std::endl;
+
     //
     //  simulate a number of time steps
     //
@@ -192,32 +196,43 @@ int main( int argc, char **argv )
         //
         //  compute all forces
         //
+        std::cout << "Applying forces on " << rank << std::endl;
         frame.apply_forces();
-     
+        std::cout << "Applied forces on " << rank << std::endl;
+
+        /*
         if( find_option( argc, argv, "-no" ) == -1 )
         {
-          
-          MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-          MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
-          MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
+        */
 
-          if (rank == 0){
+        std::cout << "davg on " << rank << ":" << frame.davg << std::endl;
+        std::cout << "navg on " << rank << ":" << frame.navg << std::endl;
+        std::cout << "dmin on " << rank << ":" << frame.dmin << std::endl;
+
+        MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+        MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+        MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
+
+        if (rank == 0){
             //
             // Computing statistical data
             //
             if (rnavg) {
-              absavg +=  rdavg/rnavg;
-              nabsavg++;
+                absavg +=  rdavg/rnavg;
+                nabsavg++;
             }
             if (rdmin < absmin) absmin = rdmin;
-          }
-
+            std::cout << "Done computing statistical data " << rank << std::endl;
         }
+
+        //}
 
         //
         //  move particles
         //
+        std::cout << "Updating locations on " << rank << std::endl;
         frame.update_locations();
+        std::cout << "Updated locations on " << rank << std::endl;
 
     }
     simulation_time = read_timer( ) - simulation_time;

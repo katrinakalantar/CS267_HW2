@@ -56,6 +56,10 @@ public:
         mem = new particle_t[_n_particles];
         mem_size = 0;
 
+        for(int i = 0; i < _n_particles; ++i){
+            mem[mem_size++] = particles[i];
+        }
+
         next_mem = new particle_t[_n_particles];
         next_mem_size = 0;
 
@@ -74,8 +78,6 @@ public:
             }
 
         }
-
-        update_locations(false);
 
         /*
         * Init send buffers for locations
@@ -185,6 +187,8 @@ public:
         pSEr_buffer = new particle_t[_n_particles];
         pSEr_n = 0;
 
+        update_locations(false);
+
     }
 
     /*
@@ -206,29 +210,36 @@ private:
         MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE);
         MPI_Type_commit( &PARTICLE );
 
-        MPI_Request reqs[2];
+        int n_reqs = should_send + should_recv;
+
+        MPI_Request reqs[n_reqs];
+        MPI_Status  status[n_reqs];
 
         int msg_tag = ++msg_idx;
         // Send info about size to NW neighbor
         if (should_send) {
-            MPI_Isend(&(n_to_send), 1, MPI_INT, target, msg_tag, MPI_COMM_WORLD, &reqs[0]);
+            MPI_Isend(&(n_to_send), 1, MPI_INT, target, msg_tag, MPI_COMM_WORLD, reqs);
         }
         // Receive info about size from the SE neighbor
         if (should_recv) {
-            MPI_Irecv(&(n_to_recv), 1, MPI_INT, source, msg_tag, MPI_COMM_WORLD, &reqs[1]);
+            MPI_Irecv(&(n_to_recv), 1, MPI_INT, source, msg_tag, MPI_COMM_WORLD, reqs + n_reqs - 1);
         }
-        MPI_Waitall(2, reqs, MPI_STATUS_IGNORE);
+        //std::cout << "O Exchanging size data on " << rank << std::endl;
+        MPI_Waitall(n_reqs, reqs, status);
+        //std::cout << "X Exchanged size data on " << rank << std::endl;
 
         msg_tag = ++msg_idx;
         // Send particles
         if (should_send) {
-            MPI_Isend(send_buffer, n_to_send, PARTICLE, target, msg_tag, MPI_COMM_WORLD, &reqs[0]);
+            MPI_Isend(send_buffer, n_to_send, PARTICLE, target, msg_tag, MPI_COMM_WORLD, reqs);
         }
         // Receive particles
         if (should_recv) {
-            MPI_Irecv(recv_buffer, n_to_recv, PARTICLE, source, msg_tag, MPI_COMM_WORLD, &reqs[1]);
+            MPI_Irecv(recv_buffer, n_to_recv, PARTICLE, source, msg_tag, MPI_COMM_WORLD, reqs + n_reqs - 1);
         }
-        MPI_Waitall(2, reqs, MPI_STATUS_IGNORE);
+        //std::cout << "O Exchanging particle data on " << rank << std::endl;
+        MPI_Waitall(n_reqs, reqs, status);
+        //std::cout << "X Exchanged particle data on " << rank << std::endl;
 
     }
 
@@ -244,6 +255,7 @@ private:
         /*
          * Send to NW, receive from SE
          */
+        std::cout << "O sending locations to NW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y + 1,
                 (block_x + 1) * block_stride + block_y - 1,
@@ -255,10 +267,12 @@ private:
                 NWs_buffer,
                 SEr_buffer
         );
+        std::cout << "X sent locations to NW on " << rank << std::endl;
 
         /*
          * Send to N, receive from S
          */
+        std::cout << "O sending locations to N on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y + 1,
                 block_x * block_stride + block_y - 1,
@@ -270,10 +284,12 @@ private:
                 Ns_buffer,
                 Sr_buffer
         );
+        std::cout << "X sent locations to N on " << rank << std::endl;
 
         /*
          * Send to NE, receive from SW
          */
+        std::cout << "O sending locations to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y + 1,
                 (block_x - 1) * block_stride + block_y - 1,
@@ -285,10 +301,12 @@ private:
                 NEs_buffer,
                 SWr_buffer
         );
+        std::cout << "X sent locations to SW on " << rank << std::endl;
 
         /*
          * Send to W, receive from E
          */
+        std::cout << "O sending locations to W on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y,
                 (block_x + 1) * block_stride + block_y,
@@ -300,10 +318,12 @@ private:
                 Ws_buffer,
                 Er_buffer
         );
+        std::cout << "X sent locations to W on " << rank << std::endl;
 
         /*
          * Send to E, receive from W
          */
+        std::cout << "O sending locations to E on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y,
                 (block_x - 1) * block_stride + block_y,
@@ -315,10 +335,12 @@ private:
                 Es_buffer,
                 Wr_buffer
         );
+        std::cout << "X sent locations to E on " << rank << std::endl;
 
         /*
          * Send to SW, receive from NE
          */
+        std::cout << "O sending locations to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y - 1,
                 (block_x + 1) * block_stride + block_y + 1,
@@ -330,14 +352,16 @@ private:
                 SWs_buffer,
                 NEr_buffer
         );
+        std::cout << "X sent locations to SW on " << rank << std::endl;
 
         /*
          * Send to S, receive from N
          */
+        std::cout << "O sending locations to S on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y - 1,
                 block_x * block_stride + block_y + 1,
-                block_x > 0,
+                block_y > 0,
                 block_y < n_block_y - 1,
                 msg_idx,
                 Ss_n,
@@ -345,10 +369,12 @@ private:
                 Ss_buffer,
                 Nr_buffer
         );
+        std::cout << "X sent locations to S on " << rank << std::endl;
 
         /*
          * Send to SE, receive from NW
          */
+        std::cout << "O sending locations to SE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y - 1,
                 (block_x - 1) * block_stride + block_y + 1,
@@ -360,6 +386,7 @@ private:
                 SEs_buffer,
                 NWr_buffer
         );
+        std::cout << "X sent locations to SE on " << rank << std::endl;
 
     }
 
@@ -374,6 +401,7 @@ private:
         /*
          * Send to NW, receive from SE
          */
+        std::cout << "O sending particles to NW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y + 1,
                 (block_x + 1) * block_stride + block_y - 1,
@@ -385,10 +413,12 @@ private:
                 pNWs_buffer,
                 pSEr_buffer
         );
+        std::cout << "X sent particles to NW on " << rank << std::endl;
 
         /*
          * Send to N, receive from S
          */
+        std::cout << "O sending particles to N on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y + 1,
                 block_x * block_stride + block_y - 1,
@@ -400,10 +430,12 @@ private:
                 pNs_buffer,
                 pSr_buffer
         );
+        std::cout << "X sent particles to N on " << rank << std::endl;
 
         /*
          * Send to NE, receive from SW
          */
+        std::cout << "O sending particles to NE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y + 1,
                 (block_x - 1) * block_stride + block_y - 1,
@@ -415,10 +447,12 @@ private:
                 pNEs_buffer,
                 pSWr_buffer
         );
+        std::cout << "X sent particles to NE on " << rank << std::endl;
 
         /*
          * Send to W, receive from E
          */
+        std::cout << "O sending particles to W on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y,
                 (block_x + 1) * block_stride + block_y,
@@ -430,10 +464,12 @@ private:
                 pWs_buffer,
                 pEr_buffer
         );
+        std::cout << "X sent particles to W on " << rank << std::endl;
 
         /*
          * Send to E, receive from W
          */
+        std::cout << "O sending particles to E on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y,
                 (block_x - 1) * block_stride + block_y,
@@ -445,10 +481,12 @@ private:
                 pEs_buffer,
                 pWr_buffer
         );
+        std::cout << "X sent particles to E on " << rank << std::endl;
 
         /*
          * Send to SW, receive from NE
          */
+        std::cout << "O sending particles to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y - 1,
                 (block_x + 1) * block_stride + block_y + 1,
@@ -460,14 +498,16 @@ private:
                 pSWs_buffer,
                 pNEr_buffer
         );
+        std::cout << "X sent particles to SW on " << rank << std::endl;
 
         /*
          * Send to S, receive from N
          */
+        std::cout << "O sending particles to S on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y - 1,
                 block_x * block_stride + block_y + 1,
-                block_x > 0,
+                block_y > 0,
                 block_y < n_block_y - 1,
                 msg_idx,
                 pSs_n,
@@ -475,10 +515,12 @@ private:
                 pSs_buffer,
                 pNr_buffer
         );
+        std::cout << "X sent particles to S on " << rank << std::endl;
 
         /*
          * Send to SE, receive from NW
          */
+        std::cout << "O sending particles to SE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y - 1,
                 (block_x - 1) * block_stride + block_y + 1,
@@ -490,6 +532,7 @@ private:
                 pSEs_buffer,
                 pNWr_buffer
         );
+        std::cout << "X sent particles to SE on " << rank << std::endl;
 
     }
 
@@ -514,6 +557,8 @@ public:
         dmin = 1.0;
         davg = 0.0;
 
+        std::cout << mem_size << std::endl;
+
         for(int p_idx = 0; p_idx < mem_size; ++p_idx) {
 
             particle_t &part = mem[p_idx];
@@ -522,8 +567,8 @@ public:
             particle_t **ptr;
 
             /*
-         * Interaction with particles in the same cell
-         */
+            * Interaction with particles in the same cell
+            */
             get_idx(part.x, part.y, x_idx, y_idx);
             size_x_y = size_grid[x_idx][y_idx];
             ptr = part_grid[x_idx][y_idx];
@@ -655,17 +700,11 @@ public:
         int **target_size_grid;
         particle_t* target_mem;
         int *target_n_particles;
-        if (next_frame) {
-            target_grid = next_part_grid;
-            target_size_grid = next_size_grid;
-            target_mem = next_mem;
-            target_n_particles = &next_mem_size;
-        } else {
-            target_grid = part_grid;
-            target_size_grid = size_grid;
-            target_mem = mem;
-            target_n_particles = &mem_size;
-        }
+
+        target_grid = next_part_grid;
+        target_size_grid = next_size_grid;
+        target_mem = next_mem;
+        target_n_particles = &next_mem_size;
 
         int x_idx, y_idx;
         for (int i = 0; i < n_particles; ++i) {
@@ -746,8 +785,10 @@ public:
                     target_grid[x_idx][y_idx] = new particle_t *[n_particles];
                     size_x_y = 0;
                 }
-                target_grid[x_idx][y_idx][size_x_y] = particles + i;
+                target_mem[(*target_n_particles)] = part;
+                target_grid[x_idx][y_idx][size_x_y] = particles + (*target_n_particles);
                 ++size_x_y;
+                ++(*target_n_particles);
             }
 
         }
@@ -871,35 +912,31 @@ public:
          * Swap frames
          */
 
-        if (next_frame) {
+        particle_t**** swap_part_grid;
+        int** swap_size_grid;
+        particle_t* swap_mem;
+        int swap_n_particles;
 
-            particle_t**** swap_part_grid;
-            int** swap_size_grid;
-            particle_t* swap_mem;
-            int swap_n_particles;
-
-            for (int i = 0; i < n_x; ++i) {
-                for (int j = 0; j < n_y; ++j) {
-                    size_grid[i][j] = min(0, size_grid[i][j]);
-                }
+        for (int i = 0; i < n_x; ++i) {
+            for (int j = 0; j < n_y; ++j) {
+                size_grid[i][j] = min(0, size_grid[i][j]);
             }
-
-            swap_part_grid = part_grid;
-            swap_size_grid = size_grid;
-            swap_mem = mem;
-            swap_n_particles = n_particles;
-
-            part_grid = target_grid;
-            size_grid = target_size_grid;
-            mem = target_mem;
-            mem_size = *target_n_particles;
-
-            next_part_grid = swap_part_grid;
-            next_size_grid = swap_size_grid;
-            next_mem = swap_mem;
-            next_mem_size = swap_n_particles;
-
         }
+
+        swap_part_grid = part_grid;
+        swap_size_grid = size_grid;
+        swap_mem = mem;
+        swap_n_particles = n_particles;
+
+        part_grid = target_grid;
+        size_grid = target_size_grid;
+        mem = target_mem;
+        mem_size = *target_n_particles;
+
+        next_part_grid = swap_part_grid;
+        next_size_grid = swap_size_grid;
+        next_mem = swap_mem;
+        next_mem_size = swap_n_particles;
 
     }
 

@@ -8,10 +8,10 @@ find_package(MPI REQUIRED)
 include_directories(${MPI_INCLUDE_PATH})
 
 set(SOURCE_FILES
-    autograder.cpp
+    #autograder.cpp
     common.cpp
     common.h
-    #mpi.cpp
+    mpi.cpp
     #openmp.cpp
     #pthreads.cpp
     #serial.cpp
