@@ -22,6 +22,10 @@
 #include "frame.h"
 
 #define density 0.0005
+#define mass    0.01
+#define cutoff  0.01
+#define min_r   (cutoff/100)
+#define dt      0.0005
 
 
 class MPIFrame{
@@ -31,21 +35,26 @@ public:
              const int _block_x, const int _block_y,
              const int _n_block_x, const int _n_block_y,
              const int _n_x, const int _n_y,
-             particle_t *particles, const int _n_particles) :
-            size(sqrt( density * _n_particles)),
-            delta_x(sqrt( density * _n_particles) / ((double) _n_x)),
-            delta_y(sqrt( density * _n_particles) / ((double) _n_y)),
+             particle_t *particles, const int _n_particles,
+             const int tot_n_particles) :
+            size(sqrt( density * tot_n_particles)),
+            delta_x(sqrt( density * tot_n_particles) / ((double) _n_x)),
+            delta_y(sqrt( density * tot_n_particles) / ((double) _n_y)),
             n_x(_n_x),
             n_y(_n_y),
-            max_n_particles(_n_particles),
+            max_n_particles(tot_n_particles),
             rank(_block_x * _block_stride + _block_y),
             block_stride(_block_stride),
             block_x(_block_x),
             block_y(_block_y),
             n_block_x(_n_block_x),
             n_block_y(_n_block_y),
-            x_offset(_block_x * _n_x * (sqrt( density * _n_particles) / ((double) _n_x))),
-            y_offset(_block_y * _n_y * (sqrt( density * _n_particles) / ((double) _n_y))){
+            x_offset(_block_x * _n_x * (sqrt( density * tot_n_particles) / ((double) _n_x))),
+            y_offset(_block_y * _n_y * (sqrt( density * tot_n_particles) / ((double) _n_y))){
+
+        std::cout << "-1: particles in frame " << _n_particles << " " << rank << std::endl;
+
+        msg_idx = 0;
 
         part_grid = new particle_t***[n_x];
         next_part_grid = new particle_t***[n_x];
@@ -53,14 +62,16 @@ public:
         size_grid = new int*[n_x];
         next_size_grid = new int*[n_x];
 
-        mem = new particle_t[_n_particles];
+        mem = new particle_t[max_n_particles];
         mem_size = 0;
 
         for(int i = 0; i < _n_particles; ++i){
             mem[mem_size++] = particles[i];
         }
 
-        next_mem = new particle_t[_n_particles];
+        std::cout << "-1: memsize in frame " << mem_size << " " << rank << std::endl;
+
+        next_mem = new particle_t[max_n_particles];
         next_mem_size = 0;
 
         int i, j;
@@ -82,112 +93,112 @@ public:
         /*
         * Init send buffers for locations
         */
-        NWs_buffer = new particle_t[_n_particles];
+        NWs_buffer = new particle_t[max_n_particles];
         NWs_n = 0;
 
-        Ns_buffer = new particle_t[_n_particles];
+        Ns_buffer = new particle_t[max_n_particles];
         Ns_n = 0;
 
-        NEs_buffer = new particle_t[_n_particles];
+        NEs_buffer = new particle_t[max_n_particles];
         NEs_n = 0;
 
-        Ws_buffer = new particle_t[_n_particles];
+        Ws_buffer = new particle_t[max_n_particles];
         Ws_n = 0;
 
-        Es_buffer = new particle_t[_n_particles];
+        Es_buffer = new particle_t[max_n_particles];
         Es_n = 0;
 
-        SWs_buffer = new particle_t[_n_particles];
+        SWs_buffer = new particle_t[max_n_particles];
         SWs_n = 0;
 
-        Ss_buffer = new particle_t[_n_particles];
+        Ss_buffer = new particle_t[max_n_particles];
         Ss_n = 0;
 
-        SEs_buffer = new particle_t[_n_particles];
+        SEs_buffer = new particle_t[max_n_particles];
         SEs_n = 0;
 
         /*
          * Init receive buffers for locations
          */
-        NWr_buffer = new particle_t[_n_particles];
+        NWr_buffer = new particle_t[max_n_particles];
         NWr_n = 0;
 
-        Nr_buffer = new particle_t[_n_particles];
+        Nr_buffer = new particle_t[max_n_particles];
         Nr_n = 0;
 
-        NEr_buffer = new particle_t[_n_particles];
+        NEr_buffer = new particle_t[max_n_particles];
         NEr_n = 0;
 
-        Wr_buffer = new particle_t[_n_particles];
+        Wr_buffer = new particle_t[max_n_particles];
         Wr_n = 0;
 
-        Er_buffer = new particle_t[_n_particles];
+        Er_buffer = new particle_t[max_n_particles];
         Er_n = 0;
 
-        SWr_buffer = new particle_t[_n_particles];
+        SWr_buffer = new particle_t[max_n_particles];
         SWr_n = 0;
 
-        Sr_buffer = new particle_t[_n_particles];
+        Sr_buffer = new particle_t[max_n_particles];
         Sr_n = 0;
 
-        SEr_buffer = new particle_t[_n_particles];
+        SEr_buffer = new particle_t[max_n_particles];
         SEr_n = 0;
 
         /*
          * Init send buffers for particles
          */
-        pNWs_buffer = new particle_t[_n_particles];
+        pNWs_buffer = new particle_t[max_n_particles];
         pNWs_n = 0;
 
-        pNs_buffer = new particle_t[_n_particles];
+        pNs_buffer = new particle_t[max_n_particles];
         pNs_n = 0;
 
-        pNEs_buffer = new particle_t[_n_particles];
+        pNEs_buffer = new particle_t[max_n_particles];
         pNEs_n = 0;
 
-        pWs_buffer = new particle_t[_n_particles];
+        pWs_buffer = new particle_t[max_n_particles];
         pWs_n = 0;
 
-        pEs_buffer = new particle_t[_n_particles];
+        pEs_buffer = new particle_t[max_n_particles];
         pEs_n = 0;
 
-        pSWs_buffer = new particle_t[_n_particles];
+        pSWs_buffer = new particle_t[max_n_particles];
         pSWs_n = 0;
 
-        pSs_buffer = new particle_t[_n_particles];
+        pSs_buffer = new particle_t[max_n_particles];
         pSs_n = 0;
 
-        pSEs_buffer = new particle_t[_n_particles];
+        pSEs_buffer = new particle_t[max_n_particles];
         pSEs_n = 0;
 
         /*
          * Init receive buffers for particles
          */
-        pNWr_buffer = new particle_t[_n_particles];
+        pNWr_buffer = new particle_t[max_n_particles];
         pNWr_n = 0;
 
-        pNr_buffer = new particle_t[_n_particles];
+        pNr_buffer = new particle_t[max_n_particles];
         pNr_n = 0;
 
-        pNEr_buffer = new particle_t[_n_particles];
+        pNEr_buffer = new particle_t[max_n_particles];
         pNEr_n = 0;
 
-        pWr_buffer = new particle_t[_n_particles];
+        pWr_buffer = new particle_t[max_n_particles];
         pWr_n = 0;
 
-        pEr_buffer = new particle_t[_n_particles];
+        pEr_buffer = new particle_t[max_n_particles];
         pEr_n = 0;
 
-        pSWr_buffer = new particle_t[_n_particles];
+        pSWr_buffer = new particle_t[max_n_particles];
         pSWr_n = 0;
 
-        pSr_buffer = new particle_t[_n_particles];
+        pSr_buffer = new particle_t[max_n_particles];
         pSr_n = 0;
 
-        pSEr_buffer = new particle_t[_n_particles];
+        pSEr_buffer = new particle_t[max_n_particles];
         pSEr_n = 0;
 
-        update_locations(false);
+        update_locations(-1, false);
 
     }
 
@@ -204,7 +215,8 @@ public:
 
 private:
     inline void comm_buffer(int target, int source, bool should_send, bool should_recv, int &msg_idx,
-                            int n_to_send, int & n_to_recv, particle_t* send_buffer, particle_t* recv_buffer){
+                            int n_to_send, int & n_to_recv, particle_t* send_buffer, particle_t* recv_buffer,
+                            std::string comment = ""){
 
         MPI_Datatype PARTICLE;
         MPI_Type_contiguous( 6, MPI_DOUBLE, &PARTICLE);
@@ -214,6 +226,13 @@ private:
 
         MPI_Request reqs[n_reqs];
         MPI_Status  status[n_reqs];
+
+        if(should_send) {
+            std::cout << "\tO sending " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
+        }
+        if(should_recv) {
+            std::cout << "\tO receiving " << comment << " from " << source << " on " << rank << std::endl;
+        }
 
         int msg_tag = ++msg_idx;
         // Send info about size to NW neighbor
@@ -241,6 +260,13 @@ private:
         MPI_Waitall(n_reqs, reqs, status);
         //std::cout << "X Exchanged particle data on " << rank << std::endl;
 
+        if(should_send) {
+            std::cout << "\tO sent " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
+        }
+        if(should_recv) {
+            std::cout << "\tX received " << n_to_recv << " " << comment << " from " << source << " on " << rank << std::endl;
+        }
+
     }
 
     /**
@@ -248,14 +274,15 @@ private:
      * forces can be computed accurately for particles
      * near the border.
      */
-    inline void comm_all_locations(){
+    inline void comm_all_locations(int STEP){
 
-        int msg_idx = 0;
+        std::cout << STEP << " :Communicating all locations on " << rank << std::endl;
+
+        std::string comment = "locations";
 
         /*
          * Send to NW, receive from SE
          */
-        std::cout << "O sending locations to NW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y + 1,
                 (block_x + 1) * block_stride + block_y - 1,
@@ -265,14 +292,13 @@ private:
                 NWs_n,
                 SEr_n,
                 NWs_buffer,
-                SEr_buffer
+                SEr_buffer,
+                comment
         );
-        std::cout << "X sent locations to NW on " << rank << std::endl;
 
         /*
          * Send to N, receive from S
          */
-        std::cout << "O sending locations to N on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y + 1,
                 block_x * block_stride + block_y - 1,
@@ -282,14 +308,13 @@ private:
                 Ns_n,
                 Sr_n,
                 Ns_buffer,
-                Sr_buffer
+                Sr_buffer,
+                comment
         );
-        std::cout << "X sent locations to N on " << rank << std::endl;
 
         /*
          * Send to NE, receive from SW
          */
-        std::cout << "O sending locations to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y + 1,
                 (block_x - 1) * block_stride + block_y - 1,
@@ -299,14 +324,13 @@ private:
                 NEs_n,
                 SWr_n,
                 NEs_buffer,
-                SWr_buffer
+                SWr_buffer,
+                comment
         );
-        std::cout << "X sent locations to SW on " << rank << std::endl;
 
         /*
          * Send to W, receive from E
          */
-        std::cout << "O sending locations to W on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y,
                 (block_x + 1) * block_stride + block_y,
@@ -316,14 +340,13 @@ private:
                 Ws_n,
                 Er_n,
                 Ws_buffer,
-                Er_buffer
+                Er_buffer,
+                comment
         );
-        std::cout << "X sent locations to W on " << rank << std::endl;
 
         /*
          * Send to E, receive from W
          */
-        std::cout << "O sending locations to E on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y,
                 (block_x - 1) * block_stride + block_y,
@@ -333,14 +356,13 @@ private:
                 Es_n,
                 Wr_n,
                 Es_buffer,
-                Wr_buffer
+                Wr_buffer,
+                comment
         );
-        std::cout << "X sent locations to E on " << rank << std::endl;
 
         /*
          * Send to SW, receive from NE
          */
-        std::cout << "O sending locations to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y - 1,
                 (block_x + 1) * block_stride + block_y + 1,
@@ -350,14 +372,13 @@ private:
                 SWs_n,
                 NEr_n,
                 SWs_buffer,
-                NEr_buffer
+                NEr_buffer,
+                comment
         );
-        std::cout << "X sent locations to SW on " << rank << std::endl;
 
         /*
          * Send to S, receive from N
          */
-        std::cout << "O sending locations to S on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y - 1,
                 block_x * block_stride + block_y + 1,
@@ -367,14 +388,13 @@ private:
                 Ss_n,
                 Nr_n,
                 Ss_buffer,
-                Nr_buffer
+                Nr_buffer,
+                comment
         );
-        std::cout << "X sent locations to S on " << rank << std::endl;
 
         /*
          * Send to SE, receive from NW
          */
-        std::cout << "O sending locations to SE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y - 1,
                 (block_x - 1) * block_stride + block_y + 1,
@@ -384,9 +404,11 @@ private:
                 SEs_n,
                 NWr_n,
                 SEs_buffer,
-                NWr_buffer
+                NWr_buffer,
+                comment
         );
-        std::cout << "X sent locations to SE on " << rank << std::endl;
+
+        std::cout << STEP << " :Communicated all locations on " << rank << std::endl;
 
     }
 
@@ -394,14 +416,15 @@ private:
      * Communicate particles so that they are handled
      * by the processor magaging the region they belong to.
      */
-    inline void comm_all_particles(){
+    inline void comm_all_particles(int STEP){
 
-        int msg_idx = 0;
+        std::cout << STEP << " :Communicating all particles on " << rank << std::endl;
+
+        std::string comment = "particles";
 
         /*
          * Send to NW, receive from SE
          */
-        std::cout << "O sending particles to NW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y + 1,
                 (block_x + 1) * block_stride + block_y - 1,
@@ -411,14 +434,13 @@ private:
                 pNWs_n,
                 pSEr_n,
                 pNWs_buffer,
-                pSEr_buffer
+                pSEr_buffer,
+                comment
         );
-        std::cout << "X sent particles to NW on " << rank << std::endl;
 
         /*
          * Send to N, receive from S
          */
-        std::cout << "O sending particles to N on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y + 1,
                 block_x * block_stride + block_y - 1,
@@ -428,14 +450,13 @@ private:
                 pNs_n,
                 pSr_n,
                 pNs_buffer,
-                pSr_buffer
+                pSr_buffer,
+                comment
         );
-        std::cout << "X sent particles to N on " << rank << std::endl;
 
         /*
          * Send to NE, receive from SW
          */
-        std::cout << "O sending particles to NE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y + 1,
                 (block_x - 1) * block_stride + block_y - 1,
@@ -445,14 +466,13 @@ private:
                 pNEs_n,
                 pSWr_n,
                 pNEs_buffer,
-                pSWr_buffer
+                pSWr_buffer,
+                comment
         );
-        std::cout << "X sent particles to NE on " << rank << std::endl;
 
         /*
          * Send to W, receive from E
          */
-        std::cout << "O sending particles to W on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y,
                 (block_x + 1) * block_stride + block_y,
@@ -462,14 +482,13 @@ private:
                 pWs_n,
                 pEr_n,
                 pWs_buffer,
-                pEr_buffer
+                pEr_buffer,
+                comment
         );
-        std::cout << "X sent particles to W on " << rank << std::endl;
 
         /*
          * Send to E, receive from W
          */
-        std::cout << "O sending particles to E on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y,
                 (block_x - 1) * block_stride + block_y,
@@ -479,14 +498,13 @@ private:
                 pEs_n,
                 pWr_n,
                 pEs_buffer,
-                pWr_buffer
+                pWr_buffer,
+                comment
         );
-        std::cout << "X sent particles to E on " << rank << std::endl;
 
         /*
          * Send to SW, receive from NE
          */
-        std::cout << "O sending particles to SW on " << rank << std::endl;
         comm_buffer(
                 (block_x - 1) * block_stride + block_y - 1,
                 (block_x + 1) * block_stride + block_y + 1,
@@ -496,14 +514,13 @@ private:
                 pSWs_n,
                 pNEr_n,
                 pSWs_buffer,
-                pNEr_buffer
+                pNEr_buffer,
+                comment
         );
-        std::cout << "X sent particles to SW on " << rank << std::endl;
 
         /*
          * Send to S, receive from N
          */
-        std::cout << "O sending particles to S on " << rank << std::endl;
         comm_buffer(
                 block_x * block_stride + block_y - 1,
                 block_x * block_stride + block_y + 1,
@@ -513,14 +530,13 @@ private:
                 pSs_n,
                 pNr_n,
                 pSs_buffer,
-                pNr_buffer
+                pNr_buffer,
+                comment
         );
-        std::cout << "X sent particles to S on " << rank << std::endl;
 
         /*
          * Send to SE, receive from NW
          */
-        std::cout << "O sending particles to SE on " << rank << std::endl;
         comm_buffer(
                 (block_x + 1) * block_stride + block_y - 1,
                 (block_x - 1) * block_stride + block_y + 1,
@@ -530,9 +546,11 @@ private:
                 pSEs_n,
                 pNWr_n,
                 pSEs_buffer,
-                pNWr_buffer
+                pNWr_buffer,
+                comment
         );
-        std::cout << "X sent particles to SE on " << rank << std::endl;
+
+        std::cout << STEP << " :Communicated all particles on " << rank << std::endl;
 
     }
 
@@ -550,14 +568,16 @@ public:
     int navg;
     double dmin;
     double davg;
+    int msg_idx;
 
-    inline void apply_forces(){
+    inline void apply_forces(int step){
 
         navg = 0;
         dmin = 1.0;
         davg = 0.0;
 
-        std::cout << mem_size << std::endl;
+        std::cout << step << ": mem_size for apply forces " << mem_size << " on " << rank << std::endl;
+
 
         for(int p_idx = 0; p_idx < mem_size; ++p_idx) {
 
@@ -566,6 +586,11 @@ public:
             int x_idx, y_idx, size_x_y;
             particle_t **ptr;
 
+            assert(part.x > 0);
+            assert(part.y > 0);
+            assert(part.x < size);
+            assert(part.y < size);
+
             /*
             * Interaction with particles in the same cell
             */
@@ -573,7 +598,7 @@ public:
             size_x_y = size_grid[x_idx][y_idx];
             ptr = part_grid[x_idx][y_idx];
             for (int i = 0; i < size_x_y; ++i) {
-                apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                _apply_force(part, **(ptr++), &dmin, &davg, &navg);
             }
 
             // South west neighboring cell
@@ -581,11 +606,12 @@ public:
                 size_x_y = size_grid[x_idx - 1][y_idx - 1];
                 ptr = part_grid[x_idx - 1][y_idx - 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x > 0 && block_y > 0) {
+            }
+            else if (block_x > 0 && block_y > 0) {
                 for (int i = 0; i < SWr_n; ++i) {
-                    apply_force(part, SWr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, SWr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -594,11 +620,12 @@ public:
                 size_x_y = size_grid[x_idx][y_idx - 1];
                 ptr = part_grid[x_idx][y_idx - 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_y > 0) {
+            }
+            else if (block_y > 0) {
                 for (int i = 0; i < Sr_n; ++i) {
-                    apply_force(part, Sr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, Sr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -607,11 +634,12 @@ public:
                 size_x_y = size_grid[x_idx + 1][y_idx - 1];
                 ptr = part_grid[x_idx + 1][y_idx - 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x < n_block_x - 1 && block_y > 0) {
+            }
+            else if (block_x < n_block_x - 1 && block_y > 0) {
                 for (int i = 0; i < SEr_n; ++i) {
-                    apply_force(part, SEr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, SEr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -620,11 +648,12 @@ public:
                 size_x_y = size_grid[x_idx - 1][y_idx];
                 ptr = part_grid[x_idx - 1][y_idx];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x > 0) {
+            }
+            else if (block_x > 0) {
                 for (int i = 0; i < Wr_n; ++i) {
-                    apply_force(part, Wr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, Wr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -633,11 +662,12 @@ public:
                 size_x_y = size_grid[x_idx + 1][y_idx];
                 ptr = part_grid[x_idx + 1][y_idx];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x < n_block_x - 1) {
+            }
+            else if (block_x < n_block_x - 1) {
                 for (int i = 0; i < Er_n; ++i) {
-                    apply_force(part, Er_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, Er_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -646,11 +676,12 @@ public:
                 size_x_y = size_grid[x_idx - 1][y_idx + 1];
                 ptr = part_grid[x_idx - 1][y_idx + 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x > 0 && block_y < n_block_y - 1) {
+            }
+            else if (block_x > 0 && block_y < n_block_y - 1) {
                 for (int i = 0; i < NWr_n; ++i) {
-                    apply_force(part, NWr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, NWr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -659,11 +690,12 @@ public:
                 size_x_y = size_grid[x_idx][y_idx + 1];
                 ptr = part_grid[x_idx][y_idx + 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_y < n_block_y - 1) {
+            }
+            else if (block_y < n_block_y - 1) {
                 for (int i = 0; i < Nr_n; ++i) {
-                    apply_force(part, Nr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, Nr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -672,11 +704,12 @@ public:
                 size_x_y = size_grid[x_idx + 1][y_idx + 1];
                 ptr = part_grid[x_idx + 1][y_idx + 1];
                 for (int i = 0; i < size_x_y; ++i) {
-                    apply_force(part, **(ptr++), &dmin, &davg, &navg);
+                    _apply_force(part, **(ptr++), &dmin, &davg, &navg);
                 }
-            } else if (block_x < n_block_x - 1 && block_y < n_block_y - 1) {
+            }
+            else if (block_x < n_block_x - 1 && block_y < n_block_y - 1) {
                 for (int i = 0; i < NEr_n; ++i) {
-                    apply_force(part, NEr_buffer[i], &dmin, &davg, &navg);
+                    _apply_force(part, NEr_buffer[i], &dmin, &davg, &navg);
                 }
             }
 
@@ -689,10 +722,12 @@ public:
      * figure out which need to be sent to neighbors
      * for managing and which are in a bordering zone.
      */
-    inline void update_locations(bool next_frame = true) {
+    inline void update_locations(int step, bool next_frame = true) {
 
         particle_t* particles = mem;
         int n_particles = mem_size;
+
+        std::cout << step << ": mem_size for update locations " << mem_size  << " on " << rank << std::endl;
 
         clear_loc_buffers();
 
@@ -704,6 +739,7 @@ public:
         target_grid = next_part_grid;
         target_size_grid = next_size_grid;
         target_mem = next_mem;
+        next_mem_size = 0;
         target_n_particles = &next_mem_size;
 
         int x_idx, y_idx;
@@ -711,7 +747,7 @@ public:
 
             particle_t &part = particles[i];
 
-            if (next_frame) move(part);
+            if (next_frame) _move(part);
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
@@ -782,7 +818,7 @@ public:
             if(x_idx >= 0 && y_idx >= 0 && x_idx < n_x  && y_idx < n_x) {
                 int &size_x_y = target_size_grid[x_idx][y_idx];
                 if (size_x_y == -1) {
-                    target_grid[x_idx][y_idx] = new particle_t *[n_particles];
+                    target_grid[x_idx][y_idx] = new particle_t *[max_n_particles];
                     size_x_y = 0;
                 }
                 target_mem[(*target_n_particles)] = part;
@@ -793,6 +829,8 @@ public:
 
         }
 
+        std::cout << "STEP: " << step << " end of loop " << rank << std::endl;
+
         if(next_frame) {
             /**
              * Get particles from neighbors that have moved
@@ -800,7 +838,7 @@ public:
              * and add them to the memory and location grid
              */
 
-            comm_all_particles();
+            comm_all_particles(step);
 
             /**
              * Add particles from NW neighbor
@@ -906,7 +944,7 @@ public:
          * Give the location of particles in bordering zones
          * to neighbors.
          */
-        comm_all_locations();
+        comm_all_locations(step);
 
         /**
          * Swap frames
@@ -1228,5 +1266,66 @@ private:
         }
 
     }
+
+    void _apply_force( particle_t &particle, particle_t &neighbor , double *dmin, double *davg, int *navg)
+    {
+
+        double dx = neighbor.x - particle.x;
+        double dy = neighbor.y - particle.y;
+        double r2 = dx * dx + dy * dy;
+        if( r2 > cutoff*cutoff )
+            return;
+        if (r2 != 0)
+        {
+            if (r2/(cutoff*cutoff) < *dmin * (*dmin))
+                *dmin = sqrt(r2)/cutoff;
+            (*davg) += sqrt(r2)/cutoff;
+            (*navg) ++;
+        }
+
+        r2 = fmax( r2, min_r*min_r );
+        double r = sqrt( r2 );
+
+
+
+        //
+        //  very simple short-range repulsive force
+        //
+        double coef = ( 1 - cutoff / r ) / r2 / mass;
+        particle.ax += coef * dx;
+        particle.ay += coef * dy;
+    }
+
+    //
+    //  integrate the ODE
+    //
+    void _move( particle_t &p )
+    {
+        //
+        //  slightly simplified Velocity Verlet integration
+        //  conserves energy better than explicit Euler method
+        //
+        p.vx += p.ax * dt;
+        p.vy += p.ay * dt;
+        p.x  += p.vx * dt;
+        p.y  += p.vy * dt;
+
+        //
+        //  bounce from walls
+        //
+        while( p.x < 0 || p.x > size )
+        {
+            //std::cout << p.ax << " " << p.ay << " " << p.vx << " " << p.vy << " " << p.x << " " << p.y << " " << std::endl;
+            p.x  = p.x < 0 ? -p.x : 2*size-p.x;
+            p.vx = -p.vx;
+        }
+        while( p.y < 0 || p.y > size )
+        {
+            //std::cout << p.ax << " " << p.ay << " " << p.vx << " " << p.vy << " " << p.x << " " << p.y << " " << std::endl;
+            p.y  = p.y < 0 ? -p.y : 2*size-p.y;
+            p.vy = -p.vy;
+        }
+    }
+
 
 };

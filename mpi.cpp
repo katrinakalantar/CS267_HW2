@@ -98,6 +98,10 @@ int main( int argc, char **argv )
     int n_block_y = block_stride;
     int n_block_x = n_proc / block_stride;
 
+    std::cout << "Block stride = " << block_stride << std::endl;
+    std::cout << "N block x = " << n_block_x << std::endl;
+    std::cout << "N block y = " << n_block_y << std::endl;
+
     if( rank == 0 ) {
 
         init_particles(n, particles);
@@ -168,8 +172,10 @@ int main( int argc, char **argv )
     int block_x = rank / block_stride;
     int block_y = rank % block_stride;
     std::cout << "Starting init on " << rank << std::endl;
-    MPIFrame frame(block_stride, block_x, block_y, n_block_x, n_block_y, 10, 10, local_partition, local_n_particles);
+    MPIFrame frame(block_stride, block_x, block_y, n_block_x, n_block_y, 10, 10, local_partition, local_n_particles, n);
     std::cout << "Init done on " << rank << std::endl;
+    std::cout << "Block x = " << block_x << std::endl;
+    std::cout << "Block y = " << block_y << std::endl;
     std::cout << std::endl;
 
     //
@@ -178,6 +184,10 @@ int main( int argc, char **argv )
     double simulation_time = read_timer( );
     for( int step = 0; step < NSTEPS; step++ )
     {
+
+        std::cout << "------------ STARTING STEP " << step << " ON " << rank << std::endl;
+        std::cout << "------------ Current message " << frame.msg_idx << " ON " << rank << std::endl;
+
         navg = 0;
         dmin = 1.0;
         davg = 0.0;
@@ -196,43 +206,44 @@ int main( int argc, char **argv )
         //
         //  compute all forces
         //
-        std::cout << "Applying forces on " << rank << std::endl;
-        frame.apply_forces();
-        std::cout << "Applied forces on " << rank << std::endl;
+        std::cout << step << ": Applying forces on " << rank << std::endl;
+        frame.apply_forces(step);
+        std::cout << step << ": Applied forces on " << rank << std::endl;
 
-        /*
-        if( find_option( argc, argv, "-no" ) == -1 )
-        {
-        */
 
-        std::cout << "davg on " << rank << ":" << frame.davg << std::endl;
-        std::cout << "navg on " << rank << ":" << frame.navg << std::endl;
-        std::cout << "dmin on " << rank << ":" << frame.dmin << std::endl;
+        //if( find_option( argc, argv, "-no" ) == -1 )
+        //{
 
-        MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
-        MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
-        MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
+            std::cout << "davg on " << rank << ":" << frame.davg << std::endl;
+            std::cout << "navg on " << rank << ":" << frame.navg << std::endl;
+            std::cout << "dmin on " << rank << ":" << frame.dmin << std::endl;
 
-        if (rank == 0){
-            //
-            // Computing statistical data
-            //
-            if (rnavg) {
-                absavg +=  rdavg/rnavg;
-                nabsavg++;
+            MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
+            MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
+
+            if (rank == 0){
+                //
+                // Computing statistical data
+                //
+                if (rnavg) {
+                    absavg +=  rdavg/rnavg;
+                    nabsavg++;
+                }
+                if (rdmin < absmin) absmin = rdmin;
+                std::cout << "Done computing statistical data " << rank << std::endl;
             }
-            if (rdmin < absmin) absmin = rdmin;
-            std::cout << "Done computing statistical data " << rank << std::endl;
-        }
 
         //}
 
         //
         //  move particles
         //
-        std::cout << "Updating locations on " << rank << std::endl;
-        frame.update_locations();
-        std::cout << "Updated locations on " << rank << std::endl;
+        std::cout << step << ": Updating locations on " << rank << std::endl;
+        frame.update_locations(step);
+        std::cout << step << ": Updated locations on " << rank << std::endl;
+
+        std::cout << "------------ DONE WITH STEP " << step << " ON " << rank << std::endl;
 
     }
     simulation_time = read_timer( ) - simulation_time;
