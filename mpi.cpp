@@ -144,7 +144,7 @@ int main( int argc, char **argv )
         std::cout << "X Sent initial size data from " << rank << std::endl;
 
         for(int p = 1; p < n_proc; ++p){
-            MPI_Isend(&partitions[p], n_particles[p], PARTICLE, p, 2 * p + 1, MPI_COMM_WORLD, reqs + p - 1);
+            MPI_Isend(partitions[p], n_particles[p], PARTICLE, p, 2 * p + 1, MPI_COMM_WORLD, reqs + p - 1);
         }
 
         std::cout << "O Sending initial particle data from " << rank << std::endl;
@@ -172,7 +172,15 @@ int main( int argc, char **argv )
     int block_x = rank / block_stride;
     int block_y = rank % block_stride;
     std::cout << "Starting init on " << rank << std::endl;
-    MPIFrame frame(block_stride, block_x, block_y, n_block_x, n_block_y, 10, 10, local_partition, local_n_particles, n);
+    MPIFrame frame(block_stride,
+                   block_x,
+                   block_y,
+                   n_block_x,
+                   n_block_y,
+                   4, 4,
+                   local_partition,
+                   local_n_particles,
+                   n);
     std::cout << "Init done on " << rank << std::endl;
     std::cout << "Block x = " << block_x << std::endl;
     std::cout << "Block y = " << block_y << std::endl;
@@ -183,14 +191,12 @@ int main( int argc, char **argv )
     //
     double simulation_time = read_timer( );
     for( int step = 0; step < NSTEPS; step++ )
+    //for( int step = 0; step < 2; step++ )
     {
 
         std::cout << "------------ STARTING STEP " << step << " ON " << rank << std::endl;
         std::cout << "------------ Current message " << frame.msg_idx << " ON " << rank << std::endl;
 
-        navg = 0;
-        dmin = 1.0;
-        davg = 0.0;
         // 
         //  collect all global data locally (not good idea to do)
         //
@@ -214,10 +220,13 @@ int main( int argc, char **argv )
         //if( find_option( argc, argv, "-no" ) == -1 )
         //{
 
-            std::cout << "davg on " << rank << ":" << frame.davg << std::endl;
-            std::cout << "navg on " << rank << ":" << frame.navg << std::endl;
-            std::cout << "dmin on " << rank << ":" << frame.dmin << std::endl;
+            std::cout << step << ": davg on " << rank << ":" << frame.davg << std::endl;
+            std::cout << step << ": navg on " << rank << ":" << frame.navg << std::endl;
+            std::cout << step << ": dmin on " << rank << ":" << frame.dmin << std::endl;
 
+            rnavg = 0;
+            rdmin = 1.0;
+            rdavg = 0.0;
             MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);

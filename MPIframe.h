@@ -21,6 +21,11 @@
 #include <mpi.h>
 #include "frame.h"
 
+#define COMM_DEBUG
+//#define SIM_DEBUG
+#define GEN_DEBUG
+//#define CHECK_ASSERT
+
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
@@ -37,22 +42,29 @@ public:
              const int _n_x, const int _n_y,
              particle_t *particles, const int _n_particles,
              const int tot_n_particles) :
-            size(sqrt( density * tot_n_particles)),
-            delta_x(sqrt( density * tot_n_particles) / ((double) _n_x)),
-            delta_y(sqrt( density * tot_n_particles) / ((double) _n_y)),
+            size(sqrt(density * tot_n_particles)),
+            delta_x(sqrt(density * tot_n_particles) / ((double) _n_x * _n_block_x)),
+            delta_y(sqrt(density * tot_n_particles) / ((double) _n_y * _n_block_y)),
             n_x(_n_x),
             n_y(_n_y),
             max_n_particles(tot_n_particles),
+            x_min(_block_x * sqrt(density * tot_n_particles) / ((double) _n_block_x)),
+            x_max((_block_x + 1) * sqrt(density * tot_n_particles) / ((double) _n_block_x)),
+            y_min(_block_y * sqrt(density * tot_n_particles) / ((double) _n_block_y)),
+            y_max((_block_y + 1) * sqrt(density * tot_n_particles) / ((double) _n_block_y)),
             rank(_block_x * _block_stride + _block_y),
             block_stride(_block_stride),
             block_x(_block_x),
             block_y(_block_y),
             n_block_x(_n_block_x),
             n_block_y(_n_block_y),
-            x_offset(_block_x * _n_x * (sqrt( density * tot_n_particles) / ((double) _n_x))),
-            y_offset(_block_y * _n_y * (sqrt( density * tot_n_particles) / ((double) _n_y))){
+            x_offset(_block_x * sqrt(density * tot_n_particles) / ((double) _n_block_x)),
+            y_offset(_block_y * sqrt(density * tot_n_particles) / ((double) _n_block_y)){
 
+        #ifdef GEN_DEBUG
         std::cout << "-1: particles in frame " << _n_particles << " " << rank << std::endl;
+        std::cout << "-1: offset " << x_offset << " " << y_offset << " over " << size << " on " << rank << std::endl;
+        #endif
 
         msg_idx = 0;
 
@@ -69,7 +81,9 @@ public:
             mem[mem_size++] = particles[i];
         }
 
+        #ifdef GEN_DEBUG
         std::cout << "-1: memsize in frame " << mem_size << " " << rank << std::endl;
+        #endif
 
         next_mem = new particle_t[max_n_particles];
         next_mem_size = 0;
@@ -200,6 +214,10 @@ public:
 
         update_locations(-1, false);
 
+        #ifdef GEN_DEBUG
+        std::cout << "-0.5: memsize in frame " << mem_size << " " << rank << std::endl;
+        #endif
+
     }
 
     /*
@@ -227,12 +245,14 @@ private:
         MPI_Request reqs[n_reqs];
         MPI_Status  status[n_reqs];
 
+        #ifdef COMM_DEBUG
         if(should_send) {
             std::cout << "\tO sending " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
         }
         if(should_recv) {
             std::cout << "\tO receiving " << comment << " from " << source << " on " << rank << std::endl;
         }
+        #endif
 
         int msg_tag = ++msg_idx;
         // Send info about size to NW neighbor
@@ -260,12 +280,14 @@ private:
         MPI_Waitall(n_reqs, reqs, status);
         //std::cout << "X Exchanged particle data on " << rank << std::endl;
 
+        #ifdef COMM_DEBUG
         if(should_send) {
             std::cout << "\tO sent " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
         }
         if(should_recv) {
             std::cout << "\tX received " << n_to_recv << " " << comment << " from " << source << " on " << rank << std::endl;
         }
+        #endif
 
     }
 
@@ -276,7 +298,9 @@ private:
      */
     inline void comm_all_locations(int STEP){
 
+        #ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all locations on " << rank << std::endl;
+        #endif
 
         std::string comment = "locations";
 
@@ -408,7 +432,9 @@ private:
                 comment
         );
 
+        #ifdef COMM_DEBUG
         std::cout << STEP << " :Communicated all locations on " << rank << std::endl;
+        #endif
 
     }
 
@@ -418,7 +444,9 @@ private:
      */
     inline void comm_all_particles(int STEP){
 
+        #ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all particles on " << rank << std::endl;
+        #endif
 
         std::string comment = "particles";
 
@@ -550,7 +578,9 @@ private:
                 comment
         );
 
+        #ifdef COMM_DEBUG
         std::cout << STEP << " :Communicated all particles on " << rank << std::endl;
+        #endif
 
     }
 
@@ -576,7 +606,9 @@ public:
         dmin = 1.0;
         davg = 0.0;
 
+        #ifdef SIM_DEBUG
         std::cout << step << ": mem_size for apply forces " << mem_size << " on " << rank << std::endl;
+        #endif
 
 
         for(int p_idx = 0; p_idx < mem_size; ++p_idx) {
@@ -724,12 +756,12 @@ public:
      */
     inline void update_locations(int step, bool next_frame = true) {
 
-        particle_t* particles = mem;
-        int n_particles = mem_size;
-
+        #ifdef SIM_DEBUG
         std::cout << step << ": mem_size for update locations " << mem_size  << " on " << rank << std::endl;
+        #endif
 
         clear_loc_buffers();
+        clear_p_buffers();
 
         particle_t ****target_grid;
         int **target_size_grid;
@@ -743,15 +775,15 @@ public:
         target_n_particles = &next_mem_size;
 
         int x_idx, y_idx;
-        for (int i = 0; i < n_particles; ++i) {
+        for (int i = 0; i < mem_size; ++i) {
 
-            particle_t &part = particles[i];
+            particle_t &part = mem[i];
 
             if (next_frame) _move(part);
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
-            if(y_idx < 0 && x_idx < 0){
+            if(part.x < x_min && part.y < y_min){
                 // This particle will move to SW neighbor
                 pSWs_buffer[pSWs_n++] = part;
             }else if(y_idx == 0 && x_idx == 0){
@@ -759,7 +791,7 @@ public:
                 SWs_buffer[SWs_n++] = part;
             }
 
-            if(y_idx < 0){
+            if(part.y < y_min){
                 // This particle will move to S neighbor
                 pSs_buffer[pSs_n++] = part;
             }else if(y_idx == 0){
@@ -767,7 +799,7 @@ public:
                 Ss_buffer[Ss_n++] = part;
             }
 
-            if(x_idx >= n_x && y_idx < 0){
+            if(part.x > x_max && part.y < y_min){
                 // This particle will move to SE neighbor
                 pSEs_buffer[pSEs_n++] = part;
             }else if(x_idx == n_x - 1 && y_idx == 0){
@@ -775,7 +807,7 @@ public:
                 SEs_buffer[SEs_n++] = part;
             }
 
-            if(x_idx < 0){
+            if(part.x < x_min){
                 // This particle will move to W neighbor
                 pWs_buffer[pWs_n++] = part;
             }else if(x_idx == 0){
@@ -783,7 +815,7 @@ public:
                 Ws_buffer[Ws_n++] = part;
             }
 
-            if(x_idx >= n_x){
+            if(part.x > x_max){
                 // This particle will move to E neighbor
                 pEs_buffer[pEs_n++] = part;
             }else if(x_idx == n_x - 1){
@@ -791,7 +823,7 @@ public:
                 Es_buffer[Es_n++] = part;
             }
 
-            if(x_idx < 0 && y_idx >= n_y){
+            if(part.x < x_min && part.y > y_max){
                 // This particle will move to NW neighbor
                 pNWs_buffer[pNWs_n++] = part;
             }else if(x_idx == 0 && y_idx == n_y){
@@ -799,7 +831,7 @@ public:
                 NWs_buffer[NWs_n++] = part;
             }
 
-            if(y_idx >= n_y){
+            if(part.y > y_max){
                 // This particle will move to N neighbor
                 pNs_buffer[pNs_n++] = part;
             }else if(y_idx == n_y - 1){
@@ -807,7 +839,7 @@ public:
                 Ns_buffer[Ns_n++] = part;
             }
 
-            if(x_idx >= n_x && y_idx >= n_y){
+            if(part.x > x_max && part.y > y_max){
                 // This particle will move to NE neighbor
                 pNEs_buffer[pNEs_n++] = part;
             }else if(x_idx == n_x - 1 && y_idx == n_y - 1){
@@ -815,21 +847,19 @@ public:
                 NEs_buffer[NEs_n++] = part;
             }
 
-            if(x_idx >= 0 && y_idx >= 0 && x_idx < n_x  && y_idx < n_x) {
+            if(part.x >= x_min && part.x <= x_max && part.y >= y_min && part.y <= y_max){
                 int &size_x_y = target_size_grid[x_idx][y_idx];
                 if (size_x_y == -1) {
                     target_grid[x_idx][y_idx] = new particle_t *[max_n_particles];
                     size_x_y = 0;
                 }
                 target_mem[(*target_n_particles)] = part;
-                target_grid[x_idx][y_idx][size_x_y] = particles + (*target_n_particles);
+                target_grid[x_idx][y_idx][size_x_y] = next_mem + (*target_n_particles);
                 ++size_x_y;
                 ++(*target_n_particles);
             }
 
         }
-
-        std::cout << "STEP: " << step << " end of loop " << rank << std::endl;
 
         if(next_frame) {
             /**
@@ -843,6 +873,9 @@ public:
             /**
              * Add particles from NW neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from NW buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pNWr_buffer,
                     pNWr_n,
@@ -851,10 +884,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": added from NW buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from N neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from N buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pNr_buffer,
                     pNr_n,
@@ -863,10 +902,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from N buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from NE neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from NE buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pNEr_buffer,
                     pNEr_n,
@@ -875,10 +920,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from NE buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles form E neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from E buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pEr_buffer,
                     pEr_n,
@@ -887,10 +938,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from E buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from W neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from W buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pWr_buffer,
                     pWr_n,
@@ -899,10 +956,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from W buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from SW neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from SW buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pSWr_buffer,
                     pSWr_n,
@@ -911,10 +974,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from SW buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from S neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from S buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pSr_buffer,
                     pSr_n,
@@ -923,10 +992,16 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from S buffer on " << rank << std::endl;
+            #endif
 
             /**
              * Add particles from SE neighbor
              */
+            #ifdef COMM_DEBUG
+            std::cout << step << ": adding from SE buffer on " << rank << std::endl;
+            #endif
             add_particles_from_buffer(
                     pSEr_buffer,
                     pSEr_n,
@@ -935,10 +1010,11 @@ public:
                     target_mem,
                     *target_n_particles
             );
+            #ifdef COMM_DEBUG
+            std::cout << step << ": added from SE buffer on " << rank << std::endl;
+            #endif
 
         }
-
-        clear_p_buffers();
 
         /**
          * Give the location of particles in bordering zones
@@ -964,7 +1040,7 @@ public:
         swap_part_grid = part_grid;
         swap_size_grid = size_grid;
         swap_mem = mem;
-        swap_n_particles = n_particles;
+        swap_n_particles = mem_size;
 
         part_grid = target_grid;
         size_grid = target_size_grid;
@@ -985,6 +1061,10 @@ private:
     const int n_x;
     const int n_y;
     const int max_n_particles;
+    const double x_min;
+    const double x_max;
+    const double y_min;
+    const double y_max;
 
     particle_t**** part_grid;
     int** size_grid;
@@ -1208,10 +1288,12 @@ private:
 
             target_mem[target_n_particles] = part;
 
+            #ifdef CHECK_ASSERT
             assert(x_idx >= 0);
             assert(y_idx >= 0);
             assert(x_idx < n_x);
             assert(y_idx < n_y);
+            #endif
 
             if(y_idx == 0 && x_idx == 0){
                 // This particle is now in SW corner
