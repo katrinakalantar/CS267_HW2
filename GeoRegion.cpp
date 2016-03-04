@@ -123,6 +123,16 @@ void GeoRegion::update_location(particle_t &p){//}, GeoRegion georeg){
 	//printf("pEdge = %d\n",p.edge);
 }
 
+//void GeoRegion::update_location_fast(){
+//	for (int regInd = 0; regInd < numRegions; regInd++ ){
+//		curReg = regionsList[regInd];
+//		regParts = curReg.get_particles();
+//		for (partInd = 0; partInd < regParts.size(); partInd++){
+//
+//		}
+//	}
+//}
+
 int GeoRegion::get_region(double x, double y){//}, GeoRegion georeg){
 	//printf("regionDim = %f\n",regionDim);//georeg.regionDim);
 	//printf("x= %f\n", x);

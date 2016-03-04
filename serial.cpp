@@ -75,41 +75,69 @@ int main( int argc, char **argv )
         //
         //  compute forces
         //
-        for( int i = 0; i < n; i++ )
-        {
-            //printf("computing forces for i%d\n",i);
-            particles[i].ax = particles[i].ay = 0; //change following for loop to just use particles in same
-            //region or neighbors (if edge)
-            int reg = particles[i].region;
-            //printf("reg=%d\n",reg);
-            std::vector<int> relev_reg;
-            relev_reg.push_back(particles[i].region);
-            if((particles[i].edge == 1)){ // or (particles[1].edge == 0)){
-                std::vector<int> reg_neighbors = aGeoRegion.get_regionsList()[reg-1].get_neighbors();
-                relev_reg.insert(relev_reg.end(), reg_neighbors.begin(), reg_neighbors.end());
-                //printf("edge\n");
-            }else if (particles[i].edge != 0){
-                printf("aaaaaaaaaaah!!!!");
-            }
+	std::vector<Region> regList = aGeoRegion.get_regionslist();
+	for (int regInd = 0; regInd < regList.size(); regInd++){
+		Region curReg = regList[regInd];
+		std::vector<int> neighborsInd = curReg.get_neighbors();
+		std::vector<Region> neighbors;
+		for (int nInd = 0; nInd < neighborsInd.size(); nInd++){
+			neighbors.push_back(regList[(nInd-1)]);
+		}
+		std::vector<particle_t> regPart = curReg.get_particles();
+		for (int partInd = 0; partInd < regPart.size(); partInd++){
+			regPart[partInd].ax = regPart[partInd].ay = 0;
+			for (int partBInd1 = 0; partBInd1 < partInd; partBInd1++){
+				apply_force(regPart[partInd],regPart[partBInd1], &dmin, &davg, &navg);
+			}
+			for (int partBInd2 = (partInd+1); partBInd2 < regPart.size(); partBInd2++){
+				apply_force(regPart[partInd],regPart[partBInd2], &dmin, &davg, &navg);
+			}
+			if (regPart[partInd].edge == 1){
+				for (int neighInd = 0; neighInd < neighbors.size(); neighInd++){
+					neighborParts = neighbors[neighInd].get_particles();
+					for (npInd = 0; npInd < neighborParts.size(); npInd++){
+						apply_force(regPart[partInd],neighborParts[npInd], &dmin, &davg, &navg);
+					}
+				}
+			}
 
-            //printf("reg_neighbors size: %lu\n", relev_reg.size());
-
-            for(std::vector<int>::size_type k = 0; k != relev_reg.size(); k++) {
-                //printf("inside loop k\n");
-                //printf("k=%d\n",reg_neighbors[k]);
-                //std::vector<particle_t> parts = reg_neighbors[k].get_particles(); // aGeoRegion.get_regionsList()[reg_neighbors[k-1]].particles;
-                std::vector<particle_t> parts =  aGeoRegion.get_regionsList()[relev_reg[k]-1].get_particles();
-                
-                for(std::vector<particle_t>::size_type j = 0; j != parts.size(); j++){
-                    if(particles[i].id!=parts[j].id){
-                        apply_force(particles[i],parts[j], &dmin, &davg, &navg);
-                    }
-//                    else
-//                        //printf("particles[i] == particles[j]\n");
-                }
-            }
-
-        }
+		}
+	}
+//        for( int i = 0; i < n; i++ )
+//        {
+//            //printf("computing forces for i%d\n",i);
+//            particles[i].ax = particles[i].ay = 0; //change following for loop to just use particles in same
+//            //region or neighbors (if edge)
+//            int reg = particles[i].region;
+//            //printf("reg=%d\n",reg);
+//            std::vector<int> relev_reg;
+//            relev_reg.push_back(particles[i].region);
+//            if((particles[i].edge == 1)){ // or (particles[1].edge == 0)){
+//                std::vector<int> reg_neighbors = aGeoRegion.get_regionsList()[reg-1].get_neighbors();
+//                relev_reg.insert(relev_reg.end(), reg_neighbors.begin(), reg_neighbors.end());
+//                //printf("edge\n");
+//            }else if (particles[i].edge != 0){
+//                printf("aaaaaaaaaaah!!!!");
+//            }
+//
+//            //printf("reg_neighbors size: %lu\n", relev_reg.size());
+//
+//            for(std::vector<int>::size_type k = 0; k != relev_reg.size(); k++) {
+//                //printf("inside loop k\n");
+//                //printf("k=%d\n",reg_neighbors[k]);
+//                //std::vector<particle_t> parts = reg_neighbors[k].get_particles(); // aGeoRegion.get_regionsList()[reg_neighbors[k-1]].particles;
+//                std::vector<particle_t> parts =  aGeoRegion.get_regionsList()[relev_reg[k]-1].get_particles();
+//
+//                for(std::vector<particle_t>::size_type j = 0; j != parts.size(); j++){
+//                    if(particles[i].id!=parts[j].id){
+//                        apply_force(particles[i],parts[j], &dmin, &davg, &navg);
+//                    }
+////                    else
+////                        //printf("particles[i] == particles[j]\n");
+//                }
+//            }
+//
+//        }
  
         //
         //  move particles
@@ -171,6 +199,7 @@ int main( int argc, char **argv )
     if( fsum )
         fclose( fsum );    
     free( particles );
+    free(aGeoRegion);
     if( fsave )
         fclose( fsave );
     
