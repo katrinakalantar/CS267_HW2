@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "common.h"
 
-#include "MPIframe.h"
+#include "MPIVectframe.h"
 
 #define cutoff  0.01
 

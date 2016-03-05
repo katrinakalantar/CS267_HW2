@@ -17,7 +17,7 @@ set(SOURCE_FILES
     #serial.cpp
     )
 
-add_executable(CS267_HW2 ${SOURCE_FILES})
+add_executable(CS267_HW2 ${SOURCE_FILES} MPIComm.h)
 
 target_link_libraries(CS267_HW2 ${MPI_LIBRARIES})
 
