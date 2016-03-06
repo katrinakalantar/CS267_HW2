@@ -18,9 +18,12 @@
 class MPIComm{
 
     MPI_Datatype PARTICLE;
+    const int rank;
 
 public:
-    MPIComm(){
+    MPIComm(int _rank):
+    rank(_rank)
+    {
         MPI_Type_contiguous(6, MPI_DOUBLE, &PARTICLE);
         MPI_Type_commit(&PARTICLE);
     }
@@ -112,17 +115,15 @@ public:
 
     }
 
-    void recv_buffer_size(int from, int msg_tag, std::vector<particle_t> &buff, MPI_Request &req) {
+    void recv_buffer_size(int from, int msg_tag, int &buffsize, MPI_Request &req) {
 
-        int size = -1;
-        MPI_Irecv(&size, 1, MPI_INT, from, msg_tag, MPI_COMM_WORLD, &req);
-        assert(size >= 0);
+        MPI_Irecv(&buffsize, 1, MPI_INT, from, msg_tag, MPI_COMM_WORLD, &req);
 
     }
 
     void recv_buffer(int from, int msg_tag, std::vector<particle_t> &buff, MPI_Request &req) {
 
-        MPI_Isend(buff.data(), buff.size(), MPI_INT, from, msg_tag, MPI_COMM_WORLD, &req);
+        MPI_Irecv(buff.data(), buff.size(), PARTICLE, from, msg_tag, MPI_COMM_WORLD, &req);
 
     }
 

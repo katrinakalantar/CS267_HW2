@@ -22,8 +22,9 @@
 #include "MPIComm.h"
 
 //#define PART_COMM
+//#define COMM_DEBUG
 //#define SIM_DEBUG
-#define GEN_DEBUG
+//#define GEN_DEBUG
 #define CHECK_ASSERT
 
 #define density 0.0005
@@ -33,10 +34,10 @@
 #define dt      0.0005
 
 
-class MPIFrame{
+class MPIVectFrame{
 
 public:
-    MPIFrame(const int _block_stride,
+    MPIVectFrame(const int _block_stride,
              const int _block_x, const int _block_y,
              const int _n_block_x, const int _n_block_y,
              const int _n_x, const int _n_y,
@@ -60,7 +61,9 @@ public:
             n_block_x(_n_block_x),
             n_block_y(_n_block_y),
             x_offset(_block_x * sqrt(density * tot_n_particles) / ((double) _n_block_x)),
-            y_offset(_block_y * sqrt(density * tot_n_particles) / ((double) _n_block_y)){
+            y_offset(_block_y * sqrt(density * tot_n_particles) / ((double) _n_block_y)),
+            mpicom(rank)
+    {
 
 #ifdef GEN_DEBUG
         std::cout << "-1: particles in frame " << _n_particles << " " << rank << std::endl;
@@ -78,7 +81,7 @@ public:
         msg_idx = 0;
 
         part_grid = new std::vector<particle_t*>*[n_x];
-        part_grid = new std::vector<particle_t*>*[n_x];
+        next_part_grid = new std::vector<particle_t*>*[n_x];
 
         int i, j;
 
@@ -91,6 +94,10 @@ public:
         part_recv_buffers = new std::vector<particle_t>[n_procs];
 
         init_locations();
+
+#ifdef GEN_DEBUG
+        std::cout << "-0.5: memsize in frame " << mem.size() << " " << rank << std::endl;
+#endif
 
     }
 
@@ -114,9 +121,9 @@ private:
      */
     void comm_all_locations(int STEP){
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all locations on " << rank << std::endl;
-        #endif
+#endif
 
         std::string comment = "locations";
 
@@ -232,9 +239,9 @@ private:
                 comment
         );
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicated all locations on " << rank << std::endl;
-        #endif
+#endif
 
     }
 
@@ -245,47 +252,70 @@ private:
      */
     void comm_all_particles(int STEP){
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all particles on " << rank << std::endl;
-        #endif
+#endif
 
         std::string comment = "particles";
 
-        int n_reqs = 2 * n_procs;
+        int n_reqs = 2 * (n_procs - 1);
         MPI_Request reqs[n_reqs];
         MPI_Status status[n_reqs];
 
-        int send_buffer_sizes[n_procs];
         int recv_buffer_sizes[n_procs];
 
         for(int p = 0; p < n_procs; ++p){
             if(p == rank) continue;
-            mpicom.send_buffer_size(p, 0, part_send_buffers[p], reqs[p]);
+            mpicom.send_buffer_size(p, msg_idx, part_send_buffers[p], reqs[p - (p > rank)]);
         }
 
         for(int p = 0; p < n_procs; ++ p){
             if(p == rank) continue;
-            mpicom.recv_buffer_size(p, 0, part_recv_buffers[p], reqs[n_procs + p]);
+            mpicom.recv_buffer_size(p, msg_idx, recv_buffer_sizes[p], reqs[n_procs - 1 + p - (p > rank)]);
         }
 
         MPI_Waitall(n_reqs, reqs, status);
+        ++msg_idx;
+
+#ifdef COMM_DEBUG
+        std::cout << STEP << ": Buff sizes on " << rank << ": ";
+        for(int i = 0; i < n_procs; ++i){
+            std::cout << " from " << i << "->" << recv_buffer_sizes[i] << " ";
+        }std::cout << std::endl;
+
+        std::cout << STEP << ": Send buffers on " << rank << ": ";
+        for(int i = 0; i < n_procs; ++i){
+            std::cout << "for " << i << " -> ";
+            for(int j = 0; j < part_send_buffers[i].size(); ++j){
+                std::cout << part_send_buffers[i][j].x << " " << part_send_buffers[i][j].y << " ";
+            }
+        }std::cout << std::endl;
+#endif
 
         for(int p = 0; p < n_procs; ++p){
             if(p == rank) continue;
-            mpicom.send_buffer(p, 1, part_send_buffers[p], reqs[p]);
+            mpicom.send_buffer(p, msg_idx, part_send_buffers[p], reqs[p - (p > rank)]);
         }
 
         for(int p = 0; p < n_procs; ++ p){
             if(p == rank) continue;
             part_recv_buffers[p].resize(recv_buffer_sizes[p]);
-            mpicom.recv_buffer(p, 1, part_recv_buffers[p], reqs[n_procs + p]);
+            mpicom.recv_buffer(p, msg_idx, part_recv_buffers[p], reqs[n_procs - 1 + p - (p > rank)]);
         }
 
         MPI_Waitall(n_reqs, reqs, status);
+        ++msg_idx;
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
+        std::cout << STEP << " :Recv buffers on " << rank << ": ";
+        for(int i = 0; i < n_procs; ++i){
+            std::cout << "from " << i << " -> ";
+            for(int j = 0; j < part_recv_buffers[i].size(); ++j){
+                std::cout << part_recv_buffers[i][j].x << " " << part_recv_buffers[i][j].y << " ";
+            }
+        }std::cout << std::endl;
         std::cout << STEP << " :Communicated all particles on " << rank << std::endl;
-        #endif
+#endif
 
     }
 
@@ -313,7 +343,7 @@ public:
         }
 
         // South buffer
-        for (int i = 0; Sr_buffer.size(); ++i) {
+        for (int i = 0; i < Sr_buffer.size(); ++i) {
             apply_force(part, Sr_buffer.at(i), &dmin, &davg, &navg);
         }
 
@@ -355,9 +385,9 @@ public:
         dmin = 1.0;
         davg = 0.0;
 
-        #ifdef SIM_DEBUG
-        std::cout << step << ": mem_size for apply forces " << mem_size << " on " << rank << std::endl;
-        #endif
+#ifdef SIM_DEBUG
+        std::cout << step << ": mem_size for apply forces " << mem.size() << " on " << rank << std::endl;
+#endif
 
 
         for(int p_idx = 0; p_idx < mem.size(); ++p_idx) {
@@ -367,10 +397,10 @@ public:
             int x_idx, y_idx, size_x_y;
             particle_t *ptr;
 
-            assert(part.x > 0);
-            assert(part.y > 0);
-            assert(part.x < size);
-            assert(part.y < size);
+            assert(part.x >= x_min);
+            assert(part.x <= x_max);
+            assert(part.y <= y_max);
+            assert(part.y >= y_min);
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
@@ -446,6 +476,11 @@ public:
 
         }
 
+#ifdef SIM_DEBUG
+        std::cout << step << ": done applying forces on " << rank << std::endl;
+#endif
+
+
     }
 
     /**
@@ -455,9 +490,9 @@ public:
      */
     void init_locations() {
 
-        #ifdef SIM_DEBUG
-        std::cout << step << ": mem_size for update locations " << mem_size  << " on " << rank << std::endl;
-        #endif
+#ifdef SIM_DEBUG
+        std::cout << -1 << ": mem_size for init locations " << mem.size()  << " on " << rank << std::endl;
+#endif
 
         clear_loc_buffers();
         clear_p_buffers();
@@ -534,8 +569,8 @@ public:
     void update_locations(int step) {
 
 #ifdef SIM_DEBUG
-        std::cout << step << ": mem_size for update locations " << mem_size  << " on " << rank << std::endl;
-        #endif
+        std::cout << step << ": mem_size for update locations " << mem.size()  << " on " << rank << std::endl;
+#endif
 
         clear_loc_buffers();
         clear_p_buffers();
@@ -551,6 +586,8 @@ public:
 
             if(part.x >= x_min && part.x <= x_max && part.y <= y_max && part.y >= y_min){
                 // Particle is still within the region
+                next_mem.push_back(part);
+                next_part_grid[x_idx][y_idx].push_back(&next_mem.back());
 
                 if(y_idx == 0 && x_idx == 0){
                     // This particle is now in SW corner
@@ -592,16 +629,19 @@ public:
                     NEs_buffer.push_back(part);
                 }
 
-                next_mem.push_back(part);
-                next_part_grid[x_idx][y_idx].push_back(&next_mem.back());
-
             }else{
 
                 // Particle is no longer within the region
-                int global_idx = (int) (part.x / (size / n_block_x));
-                int global_idy = (int) (part.y / (size / n_block_y));
+                int global_idx = (int) (part.x / (size / (double) n_block_x));
+                int global_idy = (int) (part.y / (size / (double) n_block_y));
 
-                part_send_buffers[global_idx * block_stride + global_idy].push_back(part);
+                int dest = global_idx * block_stride + global_idy;
+
+                assert(dest != rank);
+                assert(dest < n_procs);
+                assert(dest >= 0);
+
+                part_send_buffers[dest].push_back(part);
             }
 
         }
@@ -625,15 +665,27 @@ public:
          * Swap frames
          */
 
+#ifdef SIM_DEBUG
+        std::cout << step << ": swapping on " << rank << std::endl;
+#endif
+
         std::swap(mem, next_mem);
         std::swap(part_grid, next_part_grid);
 
+#ifdef SIM_DEBUG
+        std::cout << step << ": clearing on " << rank << std::endl;
+#endif
+
         next_mem.clear();
         for(int i = 0; i < n_x; ++i){
-            for(int j = 0; i < n_y; ++j){
+            for(int j = 0; j < n_y; ++j){
                 next_part_grid[i][j].clear();
             }
         }
+
+#ifdef SIM_DEBUG
+        std::cout << step << ": done updating locations on " << rank << std::endl;
+#endif
 
     }
 
@@ -772,22 +824,28 @@ private:
 
         int x_idx, y_idx;
 
+#ifdef SIM_DEBUG
+        if(buffer.size() > 0){
+            std::cout << "Adding " << buffer.size() << " particles on " << rank << std::endl;
+        }
+#endif
+
         for(int i = 0; i < buffer.size(); ++i) {
 
             const particle_t &part = buffer.at(i);
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
-            #ifdef CHECK_ASSERT
-            assert(part.x >= 0.0);
-            assert(part.y <= size);
-            assert(part.x >= 0.0);
-            assert(part.y <= size);
+#ifdef CHECK_ASSERT
+            assert(part.x >= x_min);
+            assert(part.x <= x_max);
+            assert(part.y <= y_max);
+            assert(part.y >= y_min);
             assert(x_idx >= 0);
             assert(y_idx >= 0);
             assert(x_idx < n_x);
             assert(y_idx < n_y);
-            #endif
+#endif
 
             next_mem.push_back(part);
             next_part_grid[x_idx][y_idx].push_back(&next_mem.back());

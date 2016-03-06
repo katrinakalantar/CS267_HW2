@@ -172,7 +172,7 @@ int main( int argc, char **argv )
     int block_x = rank / block_stride;
     int block_y = rank % block_stride;
     std::cout << "Starting init on " << rank << std::endl;
-    MPIFrame frame(block_stride,
+    MPIVectFrame frame(block_stride,
                    block_x,
                    block_y,
                    n_block_x,
@@ -195,7 +195,6 @@ int main( int argc, char **argv )
     {
 
         std::cout << "------------ STARTING STEP " << step << " ON " << rank << std::endl;
-        std::cout << "------------ Current message " << frame.msg_idx << " ON " << rank << std::endl;
 
         // 
         //  collect all global data locally (not good idea to do)
@@ -212,9 +211,9 @@ int main( int argc, char **argv )
         //
         //  compute all forces
         //
-        std::cout << step << ": Applying forces on " << rank << std::endl;
+        //std::cout << step << ": Applying forces on " << rank << std::endl;
         frame.apply_forces(step);
-        std::cout << step << ": Applied forces on " << rank << std::endl;
+        //std::cout << step << ": Applied forces on " << rank << std::endl;
 
 
         //if( find_option( argc, argv, "-no" ) == -1 )
@@ -248,9 +247,9 @@ int main( int argc, char **argv )
         //
         //  move particles
         //
-        std::cout << step << ": Updating locations on " << rank << std::endl;
+        //std::cout << step << ": Updating locations on " << rank << std::endl;
         frame.update_locations(step);
-        std::cout << step << ": Updated locations on " << rank << std::endl;
+        //std::cout << step << ": Updated locations on " << rank << std::endl;
 
         std::cout << "------------ DONE WITH STEP " << step << " ON " << rank << std::endl;
 
