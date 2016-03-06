@@ -5,6 +5,10 @@
 #include "common.h"
 #include "omp.h"
 
+#define cutoff  0.01
+#define min_r   (cutoff/100)
+#define mass    0.01
+
 //
 //  benchmarking program
 //
@@ -47,7 +51,7 @@ int main( int argc, char **argv )
     {
         navg = 0;
         davg = 0.0;
-	dmin = 1.0;
+	    dmin = 1.0;
         //
         //  compute all forces
         //
@@ -55,8 +59,35 @@ int main( int argc, char **argv )
         for( int i = 0; i < n; i++ )
         {
             particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-                apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+            double ax = particles[i].ax;
+            double ay = particles[i].ay;
+
+            #pragma omp for reduction (+:ax) reduction(+:ay)
+            for (int j = 0; j < n; j++ ){
+
+                double dx = particles[j].x - particles[j].x;
+                double dy = particles[j].y - particles[j].y;
+                double r2 = dx * dx + dy * dy;
+
+                if (r2 != 0 && r2 <= cutoff * cutoff)
+                {
+                    if (r2/(cutoff*cutoff) < dmin * (dmin))
+                        dmin = sqrt(r2)/cutoff;
+                    (davg) += sqrt(r2)/cutoff;
+                    (navg) ++;
+                }
+
+                r2 = fmax( r2, min_r*min_r );
+                double r = sqrt( r2 );
+
+                double coef = ( 1 - cutoff / r ) / r2 / mass;
+                ax += coef * dx;
+                ay += coef * dy;
+            }
+
+            particles[i].ax = ax;
+            particles[i].ay = ay;
+
         }
         
 		

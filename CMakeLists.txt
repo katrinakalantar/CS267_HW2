@@ -11,8 +11,8 @@ set(SOURCE_FILES
     #autograder.cpp
     common.cpp
     common.h
-    mpi.cpp
-    #openmp.cpp
+    #mpi.cpp
+    openmp.cpp
     #pthreads.cpp
     #serial.cpp
     )
