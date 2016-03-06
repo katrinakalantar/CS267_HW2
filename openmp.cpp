@@ -61,12 +61,14 @@ int main( int argc, char **argv )
             particles[i].ax = particles[i].ay = 0;
             double ax = particles[i].ax;
             double ay = particles[i].ay;
+            double x = particles[i].x;
+            double y = particles[i].y;
 
             #pragma omp for reduction (+:ax) reduction(+:ay)
             for (int j = 0; j < n; j++ ){
 
-                double dx = particles[j].x - particles[j].x;
-                double dy = particles[j].y - particles[j].y;
+                double dx = x - particles[j].x;
+                double dy = y - particles[j].y;
                 double r2 = dx * dx + dy * dy;
 
                 if (r2 != 0 && r2 <= cutoff * cutoff)
