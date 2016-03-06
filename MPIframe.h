@@ -61,10 +61,10 @@ public:
             x_offset(_block_x * sqrt(density * tot_n_particles) / ((double) _n_block_x)),
             y_offset(_block_y * sqrt(density * tot_n_particles) / ((double) _n_block_y)){
 
-        #ifdef GEN_DEBUG
+#ifdef GEN_DEBUG
         std::cout << "-1: particles in frame " << _n_particles << " " << rank << std::endl;
         std::cout << "-1: offset " << x_offset << " " << y_offset << " over " << size << " on " << rank << std::endl;
-        #endif
+#endif
 
         msg_idx = 0;
 
@@ -81,9 +81,9 @@ public:
             mem[mem_size++] = particles[i];
         }
 
-        #ifdef GEN_DEBUG
+#ifdef GEN_DEBUG
         std::cout << "-1: memsize in frame " << mem_size << " " << rank << std::endl;
-        #endif
+#endif
 
         next_mem = new particle_t[max_n_particles];
         next_mem_size = 0;
@@ -214,9 +214,9 @@ public:
 
         update_locations(-1, false);
 
-        #ifdef GEN_DEBUG
+#ifdef GEN_DEBUG
         std::cout << "-0.5: memsize in frame " << mem_size << " " << rank << std::endl;
-        #endif
+#endif
 
     }
 
@@ -245,14 +245,14 @@ private:
         MPI_Request reqs[n_reqs];
         MPI_Status  status[n_reqs];
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         if(should_send) {
             std::cout << "\tO sending " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
         }
         if(should_recv) {
             std::cout << "\tO receiving " << comment << " from " << source << " on " << rank << std::endl;
         }
-        #endif
+#endif
 
         int msg_tag = ++msg_idx;
         // Send info about size to NW neighbor
@@ -280,14 +280,14 @@ private:
         MPI_Waitall(n_reqs, reqs, status);
         //std::cout << "X Exchanged particle data on " << rank << std::endl;
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         if(should_send) {
             std::cout << "\tO sent " << n_to_send << " " << comment << " to " << target << " on " << rank << std::endl;
         }
         if(should_recv) {
             std::cout << "\tX received " << n_to_recv << " " << comment << " from " << source << " on " << rank << std::endl;
         }
-        #endif
+#endif
 
     }
 
@@ -298,9 +298,9 @@ private:
      */
     inline void comm_all_locations(int STEP){
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all locations on " << rank << std::endl;
-        #endif
+#endif
 
         std::string comment = "locations";
 
@@ -432,9 +432,9 @@ private:
                 comment
         );
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicated all locations on " << rank << std::endl;
-        #endif
+#endif
 
     }
 
@@ -444,9 +444,9 @@ private:
      */
     inline void comm_all_particles(int STEP){
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicating all particles on " << rank << std::endl;
-        #endif
+#endif
 
         std::string comment = "particles";
 
@@ -578,9 +578,9 @@ private:
                 comment
         );
 
-        #ifdef COMM_DEBUG
+#ifdef COMM_DEBUG
         std::cout << STEP << " :Communicated all particles on " << rank << std::endl;
-        #endif
+#endif
 
     }
 
@@ -606,9 +606,9 @@ public:
         dmin = 1.0;
         davg = 0.0;
 
-        #ifdef SIM_DEBUG
+#ifdef SIM_DEBUG
         std::cout << step << ": mem_size for apply forces " << mem_size << " on " << rank << std::endl;
-        #endif
+#endif
 
 
         for(int p_idx = 0; p_idx < mem_size; ++p_idx) {
@@ -756,9 +756,9 @@ public:
      */
     inline void update_locations(int step, bool next_frame = true) {
 
-        #ifdef SIM_DEBUG
+#ifdef SIM_DEBUG
         std::cout << step << ": mem_size for update locations " << mem_size  << " on " << rank << std::endl;
-        #endif
+#endif
 
         clear_loc_buffers();
         clear_p_buffers();
@@ -871,26 +871,24 @@ public:
 
             comm_all_particles(step);
 
-#ifdef PART_COMM
-
             /**
              * Add particles from NW neighbor
              */
             if(pNWr_n > 0) {
 #ifdef COMM_DEBUG
-                    std::cout << step << ": adding from NW buffer on " << rank << std::endl;
+                std::cout << step << ": adding from NW buffer on " << rank << std::endl;
 #endif
-                    add_particles_from_buffer(
-                            pNWr_buffer,
-                            pNWr_n,
-                            target_grid,
-                            target_size_grid,
-                            target_mem,
-                            *target_n_particles
-                    );
+                add_particles_from_buffer(
+                        pNWr_buffer,
+                        pNWr_n,
+                        target_grid,
+                        target_size_grid,
+                        target_mem,
+                        *target_n_particles
+                );
 #ifdef COMM_DEBUG
-                    std::cout << step << ": added from NW buffer on " << rank <<
-                    std::endl;
+                std::cout << step << ": added from NW buffer on " << rank <<
+                std::endl;
 #endif
             }
 
@@ -1034,8 +1032,6 @@ public:
                 std::cout << step << ": added from SE buffer on " << rank << std::endl;
 #endif
             }
-
-#endif
 
         }
 

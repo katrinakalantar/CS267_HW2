@@ -177,7 +177,7 @@ int main( int argc, char **argv )
                    block_y,
                    n_block_x,
                    n_block_y,
-                   4, 4,
+                   1, 1,
                    local_partition,
                    local_n_particles,
                    n);
@@ -191,7 +191,6 @@ int main( int argc, char **argv )
     //
     double simulation_time = read_timer( );
     for( int step = 0; step < NSTEPS; step++ )
-    //for( int step = 0; step < 2; step++ )
     {
 
         std::cout << "------------ STARTING STEP " << step << " ON " << rank << std::endl;
@@ -215,22 +214,34 @@ int main( int argc, char **argv )
         frame.apply_forces(step);
         //std::cout << step << ": Applied forces on " << rank << std::endl;
 
+        //
+        //  move particles
+        //
+        //std::cout << step << ": Updating locations on " << rank << std::endl;
+        frame.update_locations(step);
+        //std::cout << step << ": Updated locations on " << rank << std::endl;
 
-        //if( find_option( argc, argv, "-no" ) == -1 )
-        //{
+        if( find_option( argc, argv, "-no" ) == -1 )
+        {
+
+            rnavg = 0;
+            rdmin = 1.0;
+            rdavg = 0.0;
 
             std::cout << step << ": davg on " << rank << ":" << frame.davg << std::endl;
             std::cout << step << ": navg on " << rank << ":" << frame.navg << std::endl;
             std::cout << step << ": dmin on " << rank << ":" << frame.dmin << std::endl;
 
-            rnavg = 0;
-            rdmin = 1.0;
-            rdavg = 0.0;
             MPI_Reduce(&frame.davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&frame.navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&frame.dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
 
             if (rank == 0){
+
+                std::cout << step << ": rdavg on " << rank << ":" << rdavg << std::endl;
+                std::cout << step << ": rnavg on " << rank << ":" << rnavg << std::endl;
+                std::cout << step << ": rdmin on " << rank << ":" << rdmin << std::endl;
+
                 //
                 // Computing statistical data
                 //
@@ -242,14 +253,7 @@ int main( int argc, char **argv )
                 std::cout << "Done computing statistical data " << rank << std::endl;
             }
 
-        //}
-
-        //
-        //  move particles
-        //
-        //std::cout << step << ": Updating locations on " << rank << std::endl;
-        frame.update_locations(step);
-        //std::cout << step << ": Updated locations on " << rank << std::endl;
+        }
 
         std::cout << "------------ DONE WITH STEP " << step << " ON " << rank << std::endl;
 

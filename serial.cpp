@@ -71,31 +71,13 @@ int main( int argc, char **argv )
         //  compute forces
         //
         for (int i = 0; i < n; i++) {
-
             particles[i].ax = particles[i].ay = 0;
             grid.apply_forces(particles[i], &dmin, &davg, &navg);
-
-            /*
-
-    double ax = particles[i].ax;
-    double ay = particles[i].ay;
-
-    particles[i].ax = particles[i].ay = 0;
-    for (int j = 0; j < n; j++ ){
-        apply_force(particles[i], particles[j],&dmin,&davg,&navg);
-    }
-
-    auto pt = particles[i];
-
-    int idx, idy;
-    grid.get_idx(pt.x, pt.y, idx, idy);
-
-    assert(abs(ax - particles[i].ax) < 1e-12);
-    assert(abs(ay - particles[i].ay) < 1e-12);
-
-    */
-
         }
+
+        std::cout << "navg: " << navg << std::endl;
+        std::cout << "davg: " << davg << std::endl;
+        std::cout << "dmin: " << dmin << std::endl;
 
         //
         //  move particles
@@ -105,10 +87,6 @@ int main( int argc, char **argv )
         }
 
         grid.update_locations(particles, n);
-
-        //grid.print();
-
-        //grid.update_locations();
 
         if (find_option(argc, argv, "-no") == -1) {
             //

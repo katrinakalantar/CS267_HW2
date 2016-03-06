@@ -21,10 +21,9 @@
 
 #include "MPIComm.h"
 
-//#define PART_COMM
-//#define COMM_DEBUG
-//#define SIM_DEBUG
-//#define GEN_DEBUG
+#define COMM_DEBUG
+#define SIM_DEBUG
+#define GEN_DEBUG
 #define CHECK_ASSERT
 
 #define density 0.0005
@@ -393,25 +392,29 @@ public:
         for(int p_idx = 0; p_idx < mem.size(); ++p_idx) {
 
             particle_t &part = mem.at(p_idx);
+            part.ax = 0;
+            part.ay = 0;
 
             int x_idx, y_idx, size_x_y;
             particle_t *ptr;
 
+#ifdef CHECK_ASSERT
             assert(part.x >= x_min);
             assert(part.x <= x_max);
             assert(part.y <= y_max);
             assert(part.y >= y_min);
+#endif
 
             get_idx(part.x, part.y, x_idx, y_idx);
 
+#ifdef CHECK_ASSERT
             assert(x_idx >= 0);
             assert(x_idx < n_x);
             assert(y_idx >= 0);
             assert(y_idx < n_y);
+#endif
 
-            /*
-            * Interaction with particles in the same cell
-            */
+            // Interaction with particles in the same cell
             for (int i = 0; i < part_grid[x_idx][y_idx].size(); ++i) {
                 apply_force(part, *(part_grid[x_idx][y_idx].at(i)), &dmin, &davg, &navg);
             }
@@ -665,16 +668,8 @@ public:
          * Swap frames
          */
 
-#ifdef SIM_DEBUG
-        std::cout << step << ": swapping on " << rank << std::endl;
-#endif
-
         std::swap(mem, next_mem);
         std::swap(part_grid, next_part_grid);
-
-#ifdef SIM_DEBUG
-        std::cout << step << ": clearing on " << rank << std::endl;
-#endif
 
         next_mem.clear();
         for(int i = 0; i < n_x; ++i){
@@ -689,7 +684,7 @@ public:
 
     }
 
-private:
+public:
     const double delta_x;
     const double delta_y;
     const double size;
