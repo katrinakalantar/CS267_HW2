@@ -81,8 +81,8 @@ void init_particles( int n, particle_t *p )
         //
         p[i].x = size*(1.+(k%sx))/(1+sx);
         p[i].y = size*(1.+(k/sx))/(1+sy);
-		printf( "%6.6lf ", p[i].x );
-		printf( "%6.6lf ", p[i].y );
+		//printf( "%6.6lf ", p[i].x );
+		//printf( "%6.6lf ", p[i].y );
         //printf("after line of integrrs??\n");
 
         //

@@ -135,3 +135,14 @@ int Region::get_a(){
 int Region::get_b(){
 	return b;
 }
+//Region::~Region(){
+//	delete neighbors;
+//	delete particles;
+//	delete width;
+//	delete num;
+//	delete dim;
+//	delete x;
+//	delete y;
+//	delete a;
+//	delete b;
+//}
