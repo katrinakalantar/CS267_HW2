@@ -1,1 +1,0 @@
-/usr/bin/c++    -std=c++11   CMakeFiles/CS267_HW2.dir/common.cpp.o CMakeFiles/CS267_HW2.dir/mpi.cpp.o  -o CS267_HW2 -rdynamic /usr/lib/openmpi/lib/libmpi_cxx.so /usr/lib/openmpi/lib/libmpi.so -ldl -lhwloc -Wl,-rpath,/usr/lib/openmpi/lib 
