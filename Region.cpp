@@ -1,6 +1,6 @@
 #include <math.h>
 #include <float.h>
-#include <cblas.h>
+//#include <cblas.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "common.h"
@@ -134,6 +134,11 @@ int Region::get_a(){
 }
 int Region::get_b(){
 	return b;
+}
+void Region::Rclear_particles(){
+	std::vector<particle_t> v;
+	particles.swap(v);
+	//printf("num particles %lu\n", particles.size());
 }
 //Region::~Region(){
 //	delete neighbors;

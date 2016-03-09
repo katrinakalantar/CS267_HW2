@@ -59,6 +59,7 @@ int main( int argc, char **argv )
      */
 
     for (int i = 0; i < n; i++){
+        //printf("particle num %d\n", i);
     	aGeoRegion.update_location(particles[i]);//, aGeoRegion);
     }
     //printf("6\n");
@@ -76,23 +77,46 @@ int main( int argc, char **argv )
         //  compute forces
         //
 	std::vector<Region> regList = aGeoRegion.get_regionsList();
-	std::vector<particle_t> regPart;
-	std::vector<int> neighborsInd;
-	std::vector<Region> neighbors;
-	std::vector<particle_t> neighborParts;
-	std::vector<Region> emptyReg;
-	std::vector<particle_t> emptyPart;
-	std::vector<int> emptyInt;
+    int totalParts = 0;
+    for (int rInd = 0; rInd < regList.size(); rInd++){
+        Region* cReg = &regList[rInd];
+        //printf("num region %d\n", rInd);
+        std::vector<particle_t> partz = cReg->get_particles();
+        //printf("num parts %lu\n", partz.size());
+        totalParts += partz.size();
+    }
+    //printf("num particles total %d\n", totalParts);
+    //printf("total num regions %lu\n", regList.size());
+
+	//std::vector<Region> emptyReg;
+	//std::vector<particle_t> emptyPart;
+	//std::vector<int> emptyInt;
 	for (int regInd = 0; regInd < regList.size(); regInd++){
-		printf("region %d\n", regInd);
-		Region curReg = regList[regInd];
-		neighborsInd = curReg.get_neighbors();
+		std::vector<particle_t> regPart;
+		std::vector<int> neighborsInd;
+		std::vector<particle_t> neighborParts;
+        std::vector<particle_t> nhParts;
+		std::vector<Region*> neighbors;
+		//printf("region %d\n", regInd);
+		Region* curReg = &regList[regInd];
+		//printf("region assigned");
+		neighborsInd = curReg->get_neighbors();
+		//printf("neighbors assigned");
+		//Region neighbors = (Region) malloc( neighborsInd.size() * sizeof(Region) );
 		for (std::vector<int>::size_type nInd = 0; nInd < neighborsInd.size(); nInd++){
-			neighbors.push_back(regList[(nInd-1)]);
+			//printf("neighbor %lu\n", nInd);
+            //printf("neighborInd %d\n", neighborsInd[nInd]);
+			neighbors.push_back(&regList[(neighborsInd[nInd]-1)]);
 		}
 		//printf("neighbors created");
 		//printf("len neighbors %d\n", neighbors.size());
-		regPart = curReg.get_particles();
+		regPart = curReg->get_particles();
+        //printf("num reg parts %lu\n", regPart.size());
+        //for (std::vector<Region*>::size_type nhInd = 0; nhInd < neighbors.size(); nhInd++){
+                    //nhParts = neighbors[nhInd]->get_particles();
+                    //printf("num neighbor parts %lu\n", nhParts.size());
+                    //std::vector<particle_t>().swap(nhParts);
+        //}
 		//printf("num particles %d\n", regPart.size());
 		for (std::vector<particle_t>::size_type partInd = 0; partInd < regPart.size(); partInd++){
 			regPart[partInd].ax = regPart[partInd].ay = 0;
@@ -105,20 +129,24 @@ int main( int argc, char **argv )
 			//printf("done with particles in region\n");
 			if (regPart[partInd].edge == 1){
 				//printf("edge\n");
-				for (std::vector<Region>::size_type neighInd = 0; neighInd < neighbors.size(); neighInd++){
-					neighborParts = neighbors[neighInd].get_particles();
+				for (std::vector<Region*>::size_type neighInd = 0; neighInd < neighbors.size(); neighInd++){
+					neighborParts = neighbors[neighInd]->get_particles();
+                    //printf("num neighbor parts %lu\n", neighborParts.size());
 					for (std::vector<particle_t>::size_type npInd = 0; npInd < neighborParts.size(); npInd++){
 						apply_force(regPart[partInd],neighborParts[npInd], &dmin, &davg, &navg);
 					}
-					neighborParts.swap(emptyPart);
+					vector<particle_t>().swap(neighborParts);
 				}
+            
 				//printf("done with neighbors\n");
 			}
 
 		}
-		neighbors.swap(emptyReg);
-		neighborsInd.ind(emptyInt);
-		regPart.swap(emptyPart);
+		vector<Region*>().swap(neighbors);
+		vector<int>().swap(neighborsInd);
+		vector<particle_t>().swap(regPart);
+		//neighborsInd.swap(emptyInt);
+		//regPart.swap(emptyPart);
 	}
 //        for( int i = 0; i < n; i++ )
 //        {
@@ -160,8 +188,24 @@ int main( int argc, char **argv )
         //  move particles
         //
         //printf("just before moving particles\n");
+        aGeoRegion.clear_particles();
+
         for( int i = 0; i < n; i++ ){
+            double pxold = particles[i].x;
+            double pyold = particles[i].y;
+            //printf("p x %f\n", particles[i].x);
+            //printf("p y %f\n", particles[i].y);
         	move( particles[i] );
+            double pxnew = particles[i].x;
+            double pynew = particles[i].y;
+            if(pxnew == pxold){
+                printf("shit, didn't move in x %d\n", i);
+            }
+            if(pynew == pyold){
+                printf("shit, didn't move in y %d\n", i);
+            }
+            //printf("p new x %f\n", particles[i].x);
+            //printf("p new y %f\n", particles[i].y);
         	aGeoRegion.update_location(particles[i]);
         }
         	//update_location(particles[i], aGeoRegion);

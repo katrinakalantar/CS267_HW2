@@ -34,6 +34,7 @@ public:
 	int get_a();
 	int get_b();
 	void add_particle(particle_t *inp_part);
+	void Rclear_particles();
 
 
 };

@@ -1,6 +1,7 @@
 #include <math.h>
 #include <float.h>
-#include <cblas.h>
+//#include <home/cc/cs199/fa13/class/cs199-cly/Downloads/ATLAS/include/cblas.h>
+//#include <cblas.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "common.h"
@@ -32,6 +33,7 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 	//printf("inside GeoRegion - 2\n");
 	//Region regionsList[numRegions];
 	std::vector<Region> regionsList1;
+	std::vector<Region*> ptrregionsList1;
 	//printf("inside GeoRegion - 3\n");
 	//particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
 	//Region *regionsList = (Region*) malloc( (numRegions) * sizeof(Region));
@@ -52,7 +54,10 @@ GeoRegion::GeoRegion(particle_t *inp_data, int n)
 		ydim1 = min(regionDim1*floor(i/sqrt_numRegions1), regionDim1*(sqrt_numRegions1-1));
 		//regionsList[(i-1)] = Region(xdim, ydim, i, numRegions, regionDim);
 		//printf("regionDim inside for loop %f\n",regionDim1);
+		//printf("whee %d\n", i);
+		//Region aRegion = Region(xdim1, ydim1, i, numRegions1, regionDim1);
 		regionsList1.push_back(Region(xdim1, ydim1, i, numRegions1, regionDim1));
+		//printf("whee %d\n", i);
 	}
 	//printf("regionDim last line of creation %f\n",regionDim1);
 
@@ -101,17 +106,20 @@ std::vector<Region> GeoRegion::get_regionsList(){
 	return regionsList;
 }
 
+
 void GeoRegion::update_particles(particle_t &p, int regionNum){
 	//printf("update_particles - regionNum - %d\n",regionNum);
-	Region a = regionsList[regionNum-1]; //TRYING THIS TO SEE IF IT IS AN INDEX ERROR
+	//Region* a = &regionsList[regionNum-1]; //TRYING THIS TO SEE IF IT IS AN INDEX ERROR
 	//printf("a.x = %f\n",a.x);
+	//printf("region Num is %d\n", regionNum);
 	regionsList[regionNum-1].add_particle(&p); //do i want a pointer to p (*p) or &p?
 	//printf("pushed back particle p\n");
 }
 void GeoRegion::clear_particles(){
-	std::vector<particle_t> v; //empty vector for swapping
-	for (int i = 1; i < (numRegions); i++){
-		regionsList[i].get_particles().swap(v); //clears vector and reallocates memory
+	//std::vector<particle_t> v; //empty vector for swapping
+	for (int i = 0; i < (numRegions); i++){
+		regionsList[i].Rclear_particles(); //clears vector and reallocates memory
+		//printf("how many particles %lu\n", regionsList[i].get_particles().size());
 	}
 }
 
